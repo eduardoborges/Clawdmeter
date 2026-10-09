@@ -18,7 +18,7 @@ The device boots into the splash. Tap the screen anywhere to switch to the Usage
 
 On the Usage view, swipe left for Stats: a heatmap of your Claude Code messages per day over the last 26 weeks, plus six numbers (sessions, total tokens, active days, longest and current streak, favorite model). The daemon reads them from `~/.claude/stats-cache.json`, the cache behind Claude Code's `/stats`, so they are as fresh as Claude Code last left that file.
 
-Swipe left once more for Sessions, one row per open Claude Code session: its project folder, whether it needs you, is working or is done, and for how long. Sessions that need you are listed first. The list comes from the hooks in [Attention alerts](#attention-alerts-optional) plus two more, `Stop` and `SessionEnd`.
+Swipe left once more for Sessions, one row per open Claude Code session: its project folder, whether it needs you, is working or is done, and for how long. Sessions that need you are listed first. The list comes from the hooks in [Attention alerts](#attention-alerts-optional) plus two more, `Stop` and `SessionEnd`. The Windows daemon doesn't send this list yet.
 
 |              Splash               |              Usage              |
 | :-------------------------------: | :-----------------------------: |
