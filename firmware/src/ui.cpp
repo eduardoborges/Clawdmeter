@@ -10,6 +10,7 @@
 // Custom fonts (scaled for 314 PPI, ~1.9x from original 165 PPI)
 LV_FONT_DECLARE(font_tiempos_56);
 LV_FONT_DECLARE(font_tiempos_34);
+LV_FONT_DECLARE(font_tiempos_48);   // digits, % and - only
 LV_FONT_DECLARE(font_styrene_48);
 LV_FONT_DECLARE(font_styrene_28);
 LV_FONT_DECLARE(font_styrene_24);
@@ -88,12 +89,12 @@ static void compute_layout(const BoardCaps& c) {
     L.bar_h = 24;
     L.panel_pad_x = 16;
     L.panel_pad_y = 12;
-    L.pill_pad_x = 18;
-    L.pill_pad_y = 6;
+    L.pill_pad_x = 14;
+    L.pill_pad_y = 4;
     L.title_font   = &font_tiempos_56;
-    L.pct_font     = &font_styrene_48;
+    L.pct_font     = &font_tiempos_56;   // numbers set in the display serif
     L.ent_pct_font = &font_tiempos_56;
-    L.pill_font    = &font_styrene_28;
+    L.pill_font    = &font_styrene_20;
     L.reset_font   = &font_styrene_28;
     L.pace_font    = &font_styrene_16;
     L.anim_font    = &font_mono_32;
@@ -141,6 +142,8 @@ static void compute_layout(const BoardCaps& c) {
         L.bt_credit_2_font = &font_styrene_14;
         L.stat_label_font = &font_styrene_14;
         L.stat_value_font = &font_styrene_20;
+        L.pct_font  = &font_tiempos_48;
+        L.pill_font = &font_styrene_16;
     } else {
         // Small layout — tuned for 240x240 (LCD-1.54 and similar square TFTs).
         // Everything shrinks: fonts two steps down, panels ~half height, and
