@@ -36,6 +36,8 @@ def test_counts_today_main_chain_once(tmp_path):
         assistant(at(9, 1), "m1", [tool], usage),                                          # same message, next block
         assistant(at(9, 2), "m2", [{"type": "tool_use", "id": "t2"}], usage, isSidechain=True),
         line("user", at(15), turnOrigin="human", sid="s2", cwd="/p/bulk"),
+        line("user", at(15, 5), message={"content": "older Claude Code: no turnOrigin"}, sid="s2", cwd="/p/bulk"),
+        line("user", at(15, 6), message={"content": "<local-command-stdout>ok</local-command-stdout>"}, sid="s2"),
         line("attachment", at(16)),
     ]
     project = tmp_path / "proj"
@@ -43,9 +45,9 @@ def test_counts_today_main_chain_once(tmp_path):
     (project / "a.jsonl").write_text("\n".join(lines) + "\n")
     msg = today_message([tmp_path], TODAY)
     assert msg["k"] == "td"
-    assert dict(msg["v"]) == {"Prompts": "2", "Tool calls": "1", "Tokens": "1.0k", "Sessions": "2",
+    assert dict(msg["v"]) == {"Prompts": "3", "Tool calls": "1", "Tokens": "1.0k", "Sessions": "2",
                               "Top project": "Clawdmeter", "Active hours": "2"}
-    assert msg["h"][9] == "8" and msg["h"][15] == "2" and msg["h"].count("0") == 22
+    assert msg["h"][9] == "8" and msg["h"][15] == "6" and msg["h"].count("0") == 22
 
 
 def test_old_files_skipped_and_signature_rolls_over(tmp_path):

@@ -43,6 +43,15 @@ def signature(dirs: list[Path], today: datetime.date) -> str:
     return f"{today.isoformat()}@{newest:.0f}"
 
 
+def _is_prompt(d: dict) -> bool:
+    """A user line typed by a person, not a tool result or a command's output."""
+    if "turnOrigin" in d:
+        return d["turnOrigin"] == "human"
+    # Claude Code before ~2.1.274 doesn't write turnOrigin.
+    content = (d.get("message") or {}).get("content")
+    return isinstance(content, str) and not d.get("isMeta") and not content.startswith("<")
+
+
 def today_message(dirs: list[Path], today: datetime.date) -> dict:
     """{"k":"td","h":<24 chars, messages per hour as '0'..'8'>,"v":[[label, value] x6]}."""
     start = datetime.datetime.combine(today, datetime.time()).astimezone()
@@ -77,7 +86,7 @@ def today_message(dirs: list[Path], today: datetime.date) -> dict:
                 sessions.add(d.get("sessionId"))
                 projects[Path(d.get("cwd") or "?").name] += 1
                 if kind == "user":
-                    prompts += d.get("turnOrigin") == "human"
+                    prompts += _is_prompt(d)
                     continue
                 m = d.get("message") or {}
                 for block in m.get("content") or []:
