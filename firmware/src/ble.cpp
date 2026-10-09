@@ -14,6 +14,12 @@
 
 #define BLE_BUF_SIZE 512
 
+// Daemons read TX when they connect. "stats":1 tells them stats messages are
+// welcome, so older firmware, which lacks it, never gets one.
+#define TX_READY "{\"stats\":1}"
+#define TX_ACK   "{\"ack\":true,\"stats\":1}"
+#define TX_ERR   "{\"err\":true,\"stats\":1}"
+
 // HID keyboard report descriptor (standard 6-KRO boot-protocol-compatible).
 // Includes the LED output report (Num/Caps/Scroll Lock indicators) — without
 // it macOS's Keyboard Setup Assistant flags the device as "unidentifiable"
@@ -354,6 +360,7 @@ void ble_init(void) {
         TX_CHAR_UUID,
         NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::NOTIFY
     );
+    tx_char->setValue(TX_READY);
 
     req_char = svc->createCharacteristic(
         REQ_CHAR_UUID,
@@ -424,14 +431,14 @@ const char* ble_get_data(void) {
 
 void ble_send_ack(void) {
     if (state == BLE_STATE_CONNECTED && tx_char) {
-        tx_char->setValue("{\"ack\":true}");
+        tx_char->setValue(TX_ACK);
         tx_char->notify();
     }
 }
 
 void ble_send_nack(void) {
     if (state == BLE_STATE_CONNECTED && tx_char) {
-        tx_char->setValue("{\"err\":true}");
+        tx_char->setValue(TX_ERR);
         tx_char->notify();
     }
 }
