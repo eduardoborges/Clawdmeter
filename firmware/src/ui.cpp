@@ -594,17 +594,51 @@ static void build_stats_workspace(lv_obj_t* tile) {
     lv_obj_center(stats_empty);
 }
 
+// ---- Sessions workspace: one row per open Claude Code session, project name
+// on the left, state and minutes in it on the right.
+static lv_obj_t* sess_empty;
+static lv_obj_t* sess_name[SESSION_ROWS];
+static lv_obj_t* sess_state[SESSION_ROWS];
+
+static void build_sessions_workspace(lv_obj_t* tile) {
+    // Rows share the space between the header and the status line.
+    const int32_t line_h = lv_font_get_line_height(L.reset_font);
+    const int32_t avail = L.scr_h + L.anim_y - lv_font_get_line_height(L.anim_font) - L.content_y;
+    const int32_t pitch = LV_MIN(line_h * 3 / 2, avail / SESSION_ROWS);
+    for (int i = 0; i < SESSION_ROWS; i++) {
+        const int32_t y = L.content_y + i * pitch;
+        sess_name[i] = lv_label_create(tile);
+        lv_obj_set_style_text_font(sess_name[i], L.reset_font, 0);
+        lv_obj_set_width(sess_name[i], L.content_w / 2);
+        lv_label_set_long_mode(sess_name[i], LV_LABEL_LONG_DOT);
+        lv_obj_set_pos(sess_name[i], L.margin, y);
+        sess_state[i] = lv_label_create(tile);
+        lv_obj_set_style_text_font(sess_state[i], L.reset_font, 0);
+        lv_obj_align(sess_state[i], LV_ALIGN_TOP_RIGHT, -L.margin, y);
+        lv_obj_add_flag(sess_name[i], LV_OBJ_FLAG_HIDDEN);
+        lv_obj_add_flag(sess_state[i], LV_OBJ_FLAG_HIDDEN);
+    }
+
+    sess_empty = lv_label_create(tile);
+    lv_label_set_text(sess_empty, "No sessions");
+    lv_obj_set_style_text_font(sess_empty, L.pill_font, 0);
+    lv_obj_set_style_text_color(sess_empty, COL_DIM, 0);
+    lv_obj_center(sess_empty);
+}
+
 // Workspaces: full-screen tiles side by side. A horizontal swipe moves between
 // them while the header, status line and mascot stay put. Taps bubble up to
 // usage_container, where a tap toggles the splash.
 static lv_obj_t* ws_view;
 static lv_obj_t* ws_stats;
+static lv_obj_t* ws_sessions;
 
 // The header names the workspace, unless the clock owns it.
 static void ws_changed_cb(lv_event_t* e) {
     (void)e;
     if (clock_base_epoch > 0) return;
-    lv_label_set_text(lbl_title, lv_tileview_get_tile_active(ws_view) == ws_stats ? "Stats" : "Usage");
+    const lv_obj_t* tile = lv_tileview_get_tile_active(ws_view);
+    lv_label_set_text(lbl_title, tile == ws_stats ? "Stats" : tile == ws_sessions ? "Sessions" : "Usage");
 }
 
 static lv_obj_t* add_workspace(uint8_t col, lv_dir_t dir) {
@@ -631,9 +665,11 @@ static void init_usage_screen(lv_obj_t* scr) {
     lv_obj_set_scrollbar_mode(ws_view, LV_SCROLLBAR_MODE_OFF);
     lv_obj_add_flag(ws_view, LV_OBJ_FLAG_EVENT_BUBBLE);
     lv_obj_t* ws_usage = add_workspace(0, LV_DIR_RIGHT);
-    ws_stats = add_workspace(1, LV_DIR_LEFT);
+    ws_stats = add_workspace(1, LV_DIR_HOR);
+    ws_sessions = add_workspace(2, LV_DIR_LEFT);
     lv_obj_add_event_cb(ws_view, ws_changed_cb, LV_EVENT_VALUE_CHANGED, NULL);
     build_stats_workspace(ws_stats);
+    build_sessions_workspace(ws_sessions);
 
     lbl_title = lv_label_create(usage_container);
     lv_label_set_text(lbl_title, "Usage");
@@ -1065,4 +1101,25 @@ void ui_update_stats(const StatsData* stats) {
         }
     }
     lv_obj_invalidate(heat_obj);
+}
+
+void ui_update_sessions(const SessionsData* sessions) {
+    char buf[24];
+    lv_obj_set_flag(sess_empty, LV_OBJ_FLAG_HIDDEN, sessions->rows > 0);
+    for (int i = 0; i < SESSION_ROWS; i++) {
+        const bool shown = i < sessions->rows;
+        lv_obj_set_flag(sess_name[i], LV_OBJ_FLAG_HIDDEN, !shown);
+        lv_obj_set_flag(sess_state[i], LV_OBJ_FLAG_HIDDEN, !shown);
+        if (!shown) continue;
+        const auto& r = sessions->row[i];
+        const char* state = r.state == 'a' ? "needs you" : r.state == 'w' ? "working" : "done";
+        const lv_color_t col = r.state == 'a' ? COL_ACCENT : r.state == 'w' ? COL_TEXT : COL_DIM;
+        if (r.mins == 0) snprintf(buf, sizeof(buf), "%s", state);
+        else if (r.mins < 60) snprintf(buf, sizeof(buf), "%s %um", state, r.mins);
+        else             snprintf(buf, sizeof(buf), "%s %uh", state, r.mins / 60);
+        lv_label_set_text(sess_name[i], r.name);
+        lv_label_set_text(sess_state[i], buf);
+        lv_obj_set_style_text_color(sess_name[i], r.state == 'd' ? COL_DIM : COL_TEXT, 0);
+        lv_obj_set_style_text_color(sess_state[i], col, 0);
+    }
 }

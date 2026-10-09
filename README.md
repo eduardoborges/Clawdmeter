@@ -18,6 +18,8 @@ The device boots into the splash. Tap the screen anywhere to switch to the Usage
 
 On the Usage view, swipe left for Stats: a heatmap of your Claude Code messages per day over the last 26 weeks, plus six numbers (sessions, total tokens, active days, longest and current streak, favorite model). The daemon reads them from `~/.claude/stats-cache.json`, the cache behind Claude Code's `/stats`, so they are as fresh as Claude Code last left that file.
 
+Swipe left once more for Sessions, one row per open Claude Code session: its project folder, whether it needs you, is working or is done, and for how long. Sessions that need you are listed first. The list comes from the hooks in [Attention alerts](#attention-alerts-optional) plus two more, `Stop` and `SessionEnd`.
+
 |              Splash               |              Usage              |
 | :-------------------------------: | :-----------------------------: |
 | ![Splash](screenshots/splash.gif) | ![Usage](screenshots/usage.png) |
@@ -216,10 +218,18 @@ When a Claude Code session is waiting on you (a permission prompt, a question, o
     "PostToolUse": [
       { "matcher": "*",
         "hooks": [{ "type": "command", "command": "/path/to/Clawdmeter/daemon/attention-hook.sh clear" }] }
+    ],
+    "Stop": [
+      { "hooks": [{ "type": "command", "command": "/path/to/Clawdmeter/daemon/attention-hook.sh stop" }] }
+    ],
+    "SessionEnd": [
+      { "hooks": [{ "type": "command", "command": "/path/to/Clawdmeter/daemon/attention-hook.sh end" }] }
     ]
   }
 }
 ```
+
+`Stop` and `SessionEnd` are only used by the Sessions workspace. Without `Stop`, a session that has finished its reply shows as working until the idle prompt marks it as needing you. Without `SessionEnd`, a closed session stays on the list for up to six hours.
 
 Clawd walks back to his corner when you tap the screen, after 2 minutes, or when that session moves on (you answer, approve a tool, or send a prompt). He shows up about 5 seconds after Claude Code raises the notification, because the daemon checks once per tick. To hear a beep as well, set `beep = on` in `~/.config/claude-usage-monitor/config` (the installers ask). The macOS and Linux daemons handle these alerts; the Windows daemon doesn't yet.
 
@@ -273,9 +283,12 @@ Stats messages go to RX as well, tagged with a `k` kind. Firmware that takes the
 ```json
 { "k": "hm", "n": 180, "h": "AAAFHFK...", "mo": [["Apr", 0], ["May", 3]] }
 { "k": "st", "v": [["Sessions", "584"], ["Total tokens", "43.4b"]] }
+{ "k": "ss", "v": [["Clawdmeter", "a", 2], ["bulk", "w", 0]] }
 ```
 
 `hm` is the heatmap: week columns from the oldest Sunday, `n` valid days, `h` levels 0 to 4 packed two days per character (`'A' + 5 * first + second`), `mo` month labels by column. `st` holds up to six label and value pairs, already formatted.
+
+`ss` lists the open sessions: project, state (`a` needs you, `w` working, `d` done) and minutes in that state.
 
 ## Development
 

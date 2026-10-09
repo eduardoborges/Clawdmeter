@@ -32,3 +32,16 @@ struct StatsData {
     struct { char label[16]; char value[16]; } stat[6];
     uint8_t stats;
 };
+
+#define SESSION_ROWS 6       // the daemon's ROWS must match
+
+// Sessions workspace, filled by the daemon's "ss" message: open Claude Code
+// sessions, the ones that need you first.
+struct SessionsData {
+    struct {
+        char name[13];       // project folder, ASCII
+        char state;          // 'a' needs you, 'w' working, 'd' done
+        uint16_t mins;       // minutes in that state when the daemon sent it
+    } row[SESSION_ROWS];
+    uint8_t rows;
+};

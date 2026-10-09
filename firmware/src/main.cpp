@@ -130,7 +130,20 @@ static void parse_stats(JsonDocument& doc) {
     }
 }
 
-enum ParseResult { PARSE_ERROR, PARSE_USAGE, PARSE_STATS };
+static SessionsData sessions;
+
+static void parse_sessions(JsonDocument& doc) {
+    sessions.rows = 0;
+    for (JsonArray v : doc["v"].as<JsonArray>()) {
+        if (sessions.rows == SESSION_ROWS) break;
+        auto& r = sessions.row[sessions.rows++];
+        strlcpy(r.name, v[0] | "", sizeof(r.name));
+        r.state = (v[1] | "d")[0];
+        r.mins = v[2] | 0;
+    }
+}
+
+enum ParseResult { PARSE_ERROR, PARSE_USAGE, PARSE_STATS, PARSE_SESSIONS };
 
 // Parse a JSON line into UsageData, or into StatsData for a stats message.
 static ParseResult parse_json(const char* json, UsageData* out) {
@@ -139,6 +152,10 @@ static ParseResult parse_json(const char* json, UsageData* out) {
     if (err) {
         Serial.printf("JSON parse error: %s\n", err.c_str());
         return PARSE_ERROR;
+    }
+    if (doc["k"] == "ss") {
+        parse_sessions(doc);
+        return PARSE_SESSIONS;
     }
     if (doc["k"].is<const char*>()) {
         parse_stats(doc);
@@ -418,6 +435,9 @@ void loop() {
         const ParseResult parsed = parse_json(ble_get_data(), &usage);
         if (parsed == PARSE_STATS) {
             ui_update_stats(&stats);
+            ble_send_ack();
+        } else if (parsed == PARSE_SESSIONS) {
+            ui_update_sessions(&sessions);
             ble_send_ack();
         } else if (parsed == PARSE_USAGE) {
             int g_before = usage_rate_group();
