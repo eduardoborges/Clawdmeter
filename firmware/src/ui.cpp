@@ -307,6 +307,13 @@ static const char* const anim_messages[] = {
 };
 #define ANIM_MSG_COUNT (sizeof(anim_messages) / sizeof(anim_messages[0]))
 
+// Display serif with the design system's negative tracking (-1px from ~48px up,
+// about half that at 34px, which rounds to none).
+static void set_serif_font(lv_obj_t* obj, const lv_font_t* font) {
+    lv_obj_set_style_text_font(obj, font, 0);
+    lv_obj_set_style_text_letter_space(obj, font == &font_tiempos_34 ? 0 : -1, 0);
+}
+
 static lv_color_t pct_color(float pct) {
     return pct >= 80.0f ? COL_RED : COL_ACCENT;
 }
@@ -407,7 +414,7 @@ static lv_obj_t* make_usage_panel(lv_obj_t* parent, int y, const char* pill_text
 
     *out_pct = lv_label_create(panel);
     lv_label_set_text(*out_pct, "---%");
-    lv_obj_set_style_text_font(*out_pct, L.pct_font, 0);
+    set_serif_font(*out_pct, L.pct_font);
     lv_obj_set_style_text_color(*out_pct, COL_TEXT, 0);
     lv_obj_set_pos(*out_pct, 0, 0);
 
@@ -681,7 +688,7 @@ static void init_usage_screen(lv_obj_t* scr) {
 
     lbl_title = lv_label_create(usage_container);
     lv_label_set_text(lbl_title, "Usage");
-    lv_obj_set_style_text_font(lbl_title, L.title_font, 0);
+    set_serif_font(lbl_title, L.title_font);
     lv_obj_set_style_text_color(lbl_title, COL_TEXT, 0);
     // The nudge balances the corner logo on the left; smaller on small
     // screens where the logo is 40px and the battery icon sits closer.
@@ -853,7 +860,7 @@ void ui_update(const UsageData* data) {
 
     if (data->enterprise) {
         // Spending box: big number-only label + small "%" symbol + desc + pace
-        lv_obj_set_style_text_font(lbl_session_pct, L.ent_pct_font, 0);
+        set_serif_font(lbl_session_pct, L.ent_pct_font);
         lv_label_set_text(lbl_session_label, "Spending");
         lv_obj_add_flag(lbl_session_reset, LV_OBJ_FLAG_HIDDEN);
         lv_obj_clear_flag(lbl_session_pct_sym, LV_OBJ_FLAG_HIDDEN);
@@ -861,7 +868,7 @@ void ui_update(const UsageData* data) {
         lv_obj_add_flag(lbl_spending_status,   LV_OBJ_FLAG_HIDDEN);
         if (panel_weekly) lv_obj_clear_flag(panel_weekly, LV_OBJ_FLAG_HIDDEN);
     } else {
-        lv_obj_set_style_text_font(lbl_session_pct, L.pct_font, 0);
+        set_serif_font(lbl_session_pct, L.pct_font);
         lv_label_set_text(lbl_session_label, "Current");
         lv_obj_clear_flag(lbl_session_reset, LV_OBJ_FLAG_HIDDEN);
         lv_obj_add_flag(lbl_session_pct_sym, LV_OBJ_FLAG_HIDDEN);
