@@ -10,6 +10,7 @@ extract() { awk -v fn="$1" '$0 ~ "^"fn"\\(\\) \\{"{f=1} f{print} f&&/^\}/{exit}'
 eval "$(extract firmware_takes_stats)"
 eval "$(extract send_stats)"
 eval "$(extract send_sessions)"
+eval "$(extract send_today)"
 
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
@@ -61,5 +62,18 @@ check "sessions: unchanged: none"    "$(writes)" "5"
 echo '{"p":"proj","e":"alert"}' > "$TMP/.config/claude-usage-monitor/sessions/abc"
 send_sessions
 check "sessions: changed: resend"    "$(writes)" "6"
+
+# send_today() sends daemon/today.py's message once a minute, when it changed.
+TODAY_PY="$(dirname "$0")/../today.py" TODAY_INTERVAL=60 TODAY_SIG="" TODAY_SENT="" TODAY_CHECKED=0
+mkdir -p "$TMP/.claude/projects/p"
+printf '{"type":"user","timestamp":"%s","turnOrigin":"human","sessionId":"s","cwd":"/x/proj"}\n' \
+    "$(date -u +%Y-%m-%dT%H:%M:%S.000Z)" > "$TMP/.claude/projects/p/a.jsonl"
+send_today
+check "today: sent"                  "$(tail -1 "$TMP/writes")" '/org/bluez/rx {"k":"td'
+send_today
+check "today: within a minute: none" "$(writes)" "7"
+TODAY_CHECKED=0
+send_today
+check "today: unchanged: none"       "$(writes)" "7"
 
 exit $fail

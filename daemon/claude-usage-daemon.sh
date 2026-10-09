@@ -191,6 +191,31 @@ send_sessions() {
     SESSIONS_SENT=$msg
 }
 
+# Today workspace: daemon/today.py scans today's transcripts. It takes a second
+# or two, so it runs once a minute and prints only the signature when nothing
+# changed since TODAY_SIG.
+TODAY_PY="$(dirname "$(readlink -f "$0")")/today.py"
+TODAY_INTERVAL=60
+TODAY_SIG="" TODAY_SENT="" TODAY_CHECKED=0
+
+send_today() {
+    (( TAKES_STATS )) && [ -n "$LAST_PAYLOAD" ] || return 0
+    local now out sig msg
+    now=$(date +%s)
+    (( now - TODAY_CHECKED >= TODAY_INTERVAL )) || return 0
+    TODAY_CHECKED=$now
+    out=$(python3 "$TODAY_PY" "$TODAY_SIG") || return 0
+    sig=${out%%$'\t'*}
+    [ "$out" = "$sig" ] && return 0
+    msg=${out#*$'\t'}
+    if [ "$msg" != "$TODAY_SENT" ]; then
+        log "Today: $msg"
+        write_gatt "$RX_CHAR_PATH" "$msg" || { log "Today write failed"; return 1; }
+        TODAY_SENT=$msg
+    fi
+    TODAY_SIG=$sig
+}
+
 heartbeat() {
     [ -z "$LAST_PAYLOAD" ] && return 1
     local now aged
@@ -722,7 +747,7 @@ while true; do
         continue
     fi
     log "GATT RX path: $RX_CHAR_PATH"
-    TAKES_STATS=0 STATS_SENT="" SESSIONS_SENT=""
+    TAKES_STATS=0 STATS_SENT="" SESSIONS_SENT="" TODAY_SIG="" TODAY_SENT="" TODAY_CHECKED=0
     firmware_takes_stats && TAKES_STATS=1 || log "Firmware doesn't take stats; not sending them"
 
     BACKOFF=1  # reset backoff on successful connection
@@ -759,6 +784,7 @@ while true; do
         fi
         send_stats
         send_sessions
+        send_today
         sleep "$TICK"
     done
 

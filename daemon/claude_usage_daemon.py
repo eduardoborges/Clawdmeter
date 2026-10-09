@@ -32,6 +32,7 @@ if _REPO_ROOT not in sys.path:
     sys.path.insert(0, _REPO_ROOT)
 from daemon.stats import STATS_CACHE, load_messages as load_stats_messages  # noqa: E402
 from daemon.sessions import sessions_message  # noqa: E402
+from daemon import today as today_stats  # noqa: E402
 
 DEVICE_NAME = "Clawdmeter"
 SERVICE_UUID = "4c41555a-4465-7669-6365-000000000001"
@@ -55,6 +56,7 @@ CONFIG_FILE = Path.home() / ".config" / "claude-usage-monitor" / "config"
 ATTENTION_DIR = Path.home() / ".config" / "claude-usage-monitor"
 ATTENTION_FLAG = ATTENTION_DIR / "attention"
 ATTENTION_MAX_AGE = 60
+TODAY_INTERVAL = 60  # seconds between checks for new Today numbers
 DEFAULT_MAX_WRITE = 180
 
 API_URL = "https://api.anthropic.com/v1/messages"
@@ -856,6 +858,9 @@ async def connect_and_run(target, stop_event: asyncio.Event) -> bool:
     clear_unsent = False
     stats_sent = None       # stats-cache.json mtime last sent to the device
     sessions_sent = None    # last sessions message sent to the device
+    today_sig = None        # transcripts signature behind today_sent
+    today_sent = None       # last Today message sent to the device
+    today_checked = 0.0
     try:
         while client.is_connected and not stop_event.is_set():
             now = time.time()
@@ -935,6 +940,18 @@ async def connect_and_run(target, stop_event: asyncio.Event) -> bool:
                 msg = sessions_message()
                 if msg != sessions_sent and await session.write_payload(msg):
                     sessions_sent = msg
+
+            # The Today workspace: rescanning the transcripts takes a second or
+            # two, so check once a minute, off the event loop, and only when a
+            # transcript changed or the day rolled over.
+            if session.takes_stats and used_successfully and now - today_checked >= TODAY_INTERVAL:
+                today_checked = now
+                dirs, day = today_stats.roots(), datetime.date.today()
+                sig = await asyncio.to_thread(today_stats.signature, dirs, day)
+                if sig != today_sig:
+                    msg = await asyncio.to_thread(today_stats.today_message, dirs, day)
+                    if msg == today_sent or await session.write_payload(msg):
+                        today_sig, today_sent = sig, msg
 
             try:
                 await asyncio.wait_for(session.refresh_requested.wait(), timeout=TICK)
