@@ -469,6 +469,18 @@ static void build_idle_group(lv_obj_t* parent) {
     lv_obj_add_flag(idle_group, LV_OBJ_FLAG_HIDDEN);  // update_view_state decides
 }
 
+// Workspaces: full-screen tiles side by side. A horizontal swipe moves between
+// them while the header, status line and mascot stay put. Taps bubble up to
+// usage_container, where a tap toggles the splash.
+static lv_obj_t* ws_view;
+
+static lv_obj_t* add_workspace(uint8_t col, lv_dir_t dir) {
+    lv_obj_t* tile = lv_tileview_add_tile(ws_view, col, 0, dir);
+    lv_obj_set_style_bg_opa(tile, LV_OPA_TRANSP, 0);
+    lv_obj_add_flag(tile, LV_OBJ_FLAG_EVENT_BUBBLE);
+    return tile;
+}
+
 static void init_usage_screen(lv_obj_t* scr) {
     usage_container = lv_obj_create(scr);
     lv_obj_set_size(usage_container, L.scr_w, L.scr_h);
@@ -478,6 +490,22 @@ static void init_usage_screen(lv_obj_t* scr) {
     lv_obj_set_style_pad_all(usage_container, 0, 0);
     lv_obj_clear_flag(usage_container, LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_add_event_cb(usage_container, global_click_cb, LV_EVENT_CLICKED, NULL);
+
+    // Created before the title and status line so those draw on top.
+    ws_view = lv_tileview_create(usage_container);
+    lv_obj_set_size(ws_view, L.scr_w, L.scr_h);
+    lv_obj_set_style_bg_opa(ws_view, LV_OPA_TRANSP, 0);   // the theme paints it opaque
+    lv_obj_set_scrollbar_mode(ws_view, LV_SCROLLBAR_MODE_OFF);
+    lv_obj_add_flag(ws_view, LV_OBJ_FLAG_EVENT_BUBBLE);
+    lv_obj_t* ws_usage = add_workspace(0, LV_DIR_RIGHT);
+    lv_obj_t* ws_dummy = add_workspace(1, LV_DIR_LEFT);
+
+    // Placeholder until the second workspace has real content.
+    lv_obj_t* dummy = lv_label_create(ws_dummy);
+    lv_label_set_text(dummy, "Workspace 2");
+    lv_obj_set_style_text_font(dummy, L.pill_font, 0);
+    lv_obj_set_style_text_color(dummy, COL_DIM, 0);
+    lv_obj_center(dummy);
 
     lbl_title = lv_label_create(usage_container);
     lv_label_set_text(lbl_title, "Usage");
@@ -489,7 +517,7 @@ static void init_usage_screen(lv_obj_t* scr) {
 
     // Usage panels (shown when connected) live in a transparent full-size group
     // so they can be toggled against the pairing hint as one unit.
-    usage_group = lv_obj_create(usage_container);
+    usage_group = lv_obj_create(ws_usage);
     lv_obj_set_size(usage_group, L.scr_w, L.scr_h);
     lv_obj_set_pos(usage_group, 0, 0);
     lv_obj_set_style_bg_opa(usage_group, LV_OPA_TRANSP, 0);
@@ -529,8 +557,8 @@ static void init_usage_screen(lv_obj_t* scr) {
     // Recolor enabled so enterprise period box can color pace and reset separately
     lv_label_set_recolor(lbl_weekly_reset, true);
 
-    build_pair_group(usage_container);
-    build_idle_group(usage_container);
+    build_pair_group(ws_usage);
+    build_idle_group(ws_usage);
 
     // Status line — always visible on the usage view. Driven by ui_tick_anim().
     lbl_anim = lv_label_create(usage_container);
