@@ -568,6 +568,19 @@ static void init_usage_screen(lv_obj_t* scr) {
     lv_obj_align(lbl_anim, LV_ALIGN_BOTTOM_MID, 0, L.anim_y);
 }
 
+// LVGL sends CLICKED for any press that didn't scroll, including a drag past
+// the last workspace. A tap is a press released near where it started.
+static const int32_t TAP_SLOP_PX = 20;
+static lv_point_t    press_pt;
+
+static void press_cb(lv_event_t* e) { (void)e; lv_indev_get_point(lv_indev_active(), &press_pt); }
+
+static bool was_tap(void) {
+    lv_point_t p;
+    lv_indev_get_point(lv_indev_active(), &p);
+    return LV_ABS(p.x - press_pt.x) <= TAP_SLOP_PX && LV_ABS(p.y - press_pt.y) <= TAP_SLOP_PX;
+}
+
 // ======== Public API ========
 
 void ui_init(void) {
@@ -616,6 +629,9 @@ void ui_init(void) {
         lv_obj_del(battery_img);
         battery_img = nullptr;
     }
+
+    lv_indev_t* indev = lv_indev_get_next(NULL);
+    if (indev) lv_indev_add_event_cb(indev, press_cb, LV_EVENT_PRESSED, NULL);
 }
 
 void ui_update(const UsageData* data) {
@@ -793,6 +809,7 @@ static void apply_battery_visibility(void) {
 
 static void global_click_cb(lv_event_t* e) {
     (void)e;
+    if (!was_tap()) return;
     if (current_screen == SCREEN_SPLASH) ui_show_screen(prev_non_splash_screen);
     else                                  ui_show_screen(SCREEN_SPLASH);
 }
