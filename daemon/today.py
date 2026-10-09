@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Today's Claude Code activity for the device's Today workspace.
 
-Read from the session transcripts (~/.claude*/projects/**/*.jsonl), since
+Read from the session transcripts (~/.claude/projects/**/*.jsonl), since
 stats-cache.json only covers days Claude Code has already rolled up. Counts the
 main conversation only, like /stats: subagent (sidechain) lines are skipped.
 No third-party imports: the macOS daemon imports it, and the Linux daemon runs
@@ -20,8 +20,8 @@ except ImportError:  # run as a script from daemon/
 
 
 def roots() -> list[Path]:
-    """Every Claude Code config dir's projects folder (~/.claude, ~/.claude-work, ...)."""
-    return sorted(p for p in Path.home().glob(".claude*/projects") if p.is_dir())
+    """The default config dir only, like the Stats workspace."""
+    return [Path.home() / ".claude" / "projects"]
 
 
 def _transcripts(dirs: list[Path], since: float) -> list[Path]:

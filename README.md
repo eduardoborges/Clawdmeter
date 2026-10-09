@@ -16,7 +16,7 @@ Shift+Tab over BLE HID for Claude Code's voice mode and mode-toggle shortcuts.
 
 The device boots into the splash. Tap the screen anywhere to switch to the Usage view; tap again to flip back to the splash.
 
-On the Usage view, swipe left for Today: your Claude Code messages per hour since midnight as 24 bars, with prompts, tool calls, tokens, sessions, the busiest project and active hours below. The daemon reads them from the session transcripts in every `~/.claude*/projects` folder, counts the main conversation only, and refreshes at most once a minute. The Windows daemon doesn't send them yet.
+On the Usage view, swipe left for Today: your Claude Code messages per hour since midnight as 24 bars, with prompts, tool calls, tokens, sessions, the busiest project and active hours below. The daemon reads them from the session transcripts in `~/.claude/projects`, counts the main conversation only, and refreshes at most once a minute. The Windows daemon doesn't send them yet.
 
 Swipe again for Stats: a heatmap of your Claude Code messages per day over the last 26 weeks, plus six numbers (sessions, total tokens, active days, longest and current streak, favorite model). The daemon reads them from `~/.claude/stats-cache.json`, the cache behind Claude Code's `/stats`, so they are as fresh as Claude Code last left that file.
 
