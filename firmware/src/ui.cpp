@@ -602,18 +602,19 @@ static lv_obj_t* sess_state[SESSION_ROWS];
 
 static void build_sessions_workspace(lv_obj_t* tile) {
     // Rows share the space between the header and the status line.
-    const int32_t line_h = lv_font_get_line_height(L.reset_font);
+    const lv_font_t* font = L.stat_value_font;
+    const int32_t line_h = lv_font_get_line_height(font);
     const int32_t avail = L.scr_h + L.anim_y - lv_font_get_line_height(L.anim_font) - L.content_y;
     const int32_t pitch = LV_MIN(line_h * 3 / 2, avail / SESSION_ROWS);
     for (int i = 0; i < SESSION_ROWS; i++) {
         const int32_t y = L.content_y + i * pitch;
         sess_name[i] = lv_label_create(tile);
-        lv_obj_set_style_text_font(sess_name[i], L.reset_font, 0);
-        lv_obj_set_width(sess_name[i], L.content_w / 2);
+        lv_obj_set_style_text_font(sess_name[i], font, 0);
+        lv_obj_set_size(sess_name[i], L.content_w / 2, line_h);   // one line, so LONG_DOT truncates
         lv_label_set_long_mode(sess_name[i], LV_LABEL_LONG_DOT);
         lv_obj_set_pos(sess_name[i], L.margin, y);
         sess_state[i] = lv_label_create(tile);
-        lv_obj_set_style_text_font(sess_state[i], L.reset_font, 0);
+        lv_obj_set_style_text_font(sess_state[i], font, 0);
         lv_obj_align(sess_state[i], LV_ALIGN_TOP_RIGHT, -L.margin, y);
         lv_obj_add_flag(sess_name[i], LV_OBJ_FLAG_HIDDEN);
         lv_obj_add_flag(sess_state[i], LV_OBJ_FLAG_HIDDEN);
