@@ -229,7 +229,7 @@ When a Claude Code session is waiting on you (a permission prompt, a question, o
 }
 ```
 
-`Stop` and `SessionEnd` are only used by the Sessions workspace. Without `Stop`, a session that has finished its reply shows as working until the idle prompt marks it as needing you. Without `SessionEnd`, a closed session stays on the list for up to six hours.
+`Stop` and `SessionEnd` are only used by the Sessions workspace. Without `Stop`, a session that has finished its reply shows as working until Claude Code's idle prompt, about a minute later. Without `SessionEnd`, a closed session stays on the list for up to six hours.
 
 Clawd walks back to his corner when you tap the screen, after 2 minutes, or when that session moves on (you answer, approve a tool, or send a prompt). He shows up about 5 seconds after Claude Code raises the notification, because the daemon checks once per tick. To hear a beep as well, set `beep = on` in `~/.config/claude-usage-monitor/config` (the installers ask). The macOS and Linux daemons handle these alerts; the Windows daemon doesn't yet.
 
