@@ -10,10 +10,16 @@ Generate each one (one at a time — `lv_font_conv` doesn't like loop-driven
 invocations) with `--no-compress` (required for LVGL 9):
 
 ```bash
-# Tiempos Text (titles, 56px)
-lv_font_conv --font assets/TiemposText-400-Regular.otf -r 0x20-0x7E \
-  --size 56 --format lvgl --bpp 4 --no-compress \
-  -o firmware/src/font_tiempos_56.c --lv-include "lvgl.h"
+# Tiempos Headline (titles and usage numbers: 56 and 34 full ASCII, 48 digits
+# only). The .otf is not in the repo.
+for size in 56 34; do
+  lv_font_conv --font assets/TiemposHeadline-Regular.otf -r 0x20-0x7E \
+    --size $size --format lvgl --bpp 4 --no-compress \
+    -o firmware/src/font_tiempos_${size}.c --lv-include "lvgl.h"
+done
+lv_font_conv --font assets/TiemposHeadline-Regular.otf -r 0x20,0x25,0x2D,0x30-0x39 \
+  --size 48 --format lvgl --bpp 4 --no-compress \
+  -o firmware/src/font_tiempos_48.c --lv-include "lvgl.h"
 
 # Styrene B (large numbers 48, panel labels 28, small text 24, minimal 20)
 for size in 48 28 24 20; do
