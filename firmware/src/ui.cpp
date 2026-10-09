@@ -198,8 +198,6 @@ static void compute_layout(const BoardCaps& c) {
 #define COL_TEXT      THEME_TEXT
 #define COL_DIM       THEME_DIM
 #define COL_ACCENT    THEME_ACCENT
-#define COL_GREEN     THEME_GREEN
-#define COL_AMBER     THEME_AMBER
 #define COL_RED       THEME_RED
 #define COL_BAR_BG    THEME_BAR_BG
 
@@ -307,9 +305,7 @@ static const char* const anim_messages[] = {
 #define ANIM_MSG_COUNT (sizeof(anim_messages) / sizeof(anim_messages[0]))
 
 static lv_color_t pct_color(float pct) {
-    if (pct >= 80.0f) return COL_RED;
-    if (pct >= 50.0f) return COL_AMBER;
-    return COL_GREEN;
+    return pct >= 80.0f ? COL_RED : COL_ACCENT;
 }
 
 static void format_reset_time(int mins, char* buf, size_t len) {
@@ -353,7 +349,7 @@ static lv_obj_t* make_bar(lv_obj_t* parent, int x, int y, int w, int h) {
     lv_obj_set_style_bg_color(bar, COL_BAR_BG, LV_PART_MAIN);
     lv_obj_set_style_bg_opa(bar, LV_OPA_COVER, LV_PART_MAIN);
     lv_obj_set_style_radius(bar, 6, LV_PART_MAIN);
-    lv_obj_set_style_bg_color(bar, COL_GREEN, LV_PART_INDICATOR);
+    lv_obj_set_style_bg_color(bar, COL_ACCENT, LV_PART_INDICATOR);
     lv_obj_set_style_bg_opa(bar, LV_OPA_COVER, LV_PART_INDICATOR);
     lv_obj_set_style_radius(bar, 6, LV_PART_INDICATOR);
     return bar;
@@ -581,7 +577,7 @@ static void build_stats_workspace(lv_obj_t* tile) {
         lv_obj_set_pos(stat_name[i], x, y);
         stat_value[i] = lv_label_create(tile);
         lv_obj_set_style_text_font(stat_value[i], L.stat_value_font, 0);
-        lv_obj_set_style_text_color(stat_value[i], COL_ACCENT, 0);
+        lv_obj_set_style_text_color(stat_value[i], COL_TEXT, 0);
         lv_obj_set_pos(stat_value[i], x, y + heat_text_h);
         lv_obj_add_flag(stat_name[i], LV_OBJ_FLAG_HIDDEN);
         lv_obj_add_flag(stat_value[i], LV_OBJ_FLAG_HIDDEN);
@@ -867,12 +863,12 @@ void ui_update(const UsageData* data) {
 
     // Pace vars used in both enterprise blocks below
     const char* pace_text = "Under pace";
-    lv_color_t  pace_color = COL_GREEN;
-    const char* pace_hex   = "788c5d";   // matches THEME_GREEN
+    lv_color_t  pace_color = COL_TEXT;
+    const char* pace_hex   = "faf9f5";   // recolor hex for each token in theme.h
     if (data->session_pct > (float)data->time_pct + 15.0f) {
-        pace_text = "Over pace";  pace_color = COL_RED;   pace_hex = "c0392b";
+        pace_text = "Over pace";  pace_color = COL_RED;    pace_hex = "c64545";
     } else if (data->session_pct > (float)data->time_pct - 15.0f) {
-        pace_text = "On pace";    pace_color = COL_AMBER; pace_hex = "d97757";
+        pace_text = "On pace";    pace_color = COL_ACCENT; pace_hex = "d97757";
     }
 
     if (data->enterprise) {
@@ -893,9 +889,7 @@ void ui_update(const UsageData* data) {
         lv_label_set_text(lbl_weekly_label, "Period");
         lv_label_set_text_fmt(lbl_weekly_pct, "%d%%", data->time_pct);
         lv_bar_set_value(bar_weekly, data->time_pct, LV_ANIM_ON);
-        lv_color_t bar_pace = (data->session_pct <= (float)data->time_pct) ? COL_GREEN :
-                              (data->session_pct <= (float)data->time_pct + 15.0f) ? COL_AMBER :
-                              COL_RED;
+        lv_color_t bar_pace = (data->session_pct <= (float)data->time_pct + 15.0f) ? COL_ACCENT : COL_RED;
         lv_obj_set_style_bg_color(bar_weekly, bar_pace, LV_PART_INDICATOR);
         snprintf(buf, sizeof(buf), "#%s %s# - #faf9f5 Resets %s#",
                  pace_hex, pace_text, data->reset_date);
