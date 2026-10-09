@@ -23,13 +23,23 @@ struct UsageData {
 
 #define STATS_WEEKS 26       // heatmap columns; the daemon's STATS_WEEKS must match
 
+struct StatPair { char label[16]; char value[16]; };   // one cell of a stat grid
+
 // Stats workspace, filled by the daemon's "hm" (heatmap) and "st" messages.
 struct StatsData {
     uint8_t level[STATS_WEEKS * 7];    // 0..4 per day, week by week from the oldest Sunday
     uint8_t days;                      // valid days; the rest of this week is in the future
     struct { char name[4]; uint8_t col; } month[8];
     uint8_t months;
-    struct { char label[16]; char value[16]; } stat[6];
+    StatPair stat[6];
+    uint8_t stats;
+};
+
+// Today workspace, filled by the daemon's "td" message: today's activity from
+// the Claude Code transcripts.
+struct TodayData {
+    uint8_t hour[24];        // messages per hour, 0..8 relative to the busiest hour
+    StatPair stat[6];
     uint8_t stats;
 };
 

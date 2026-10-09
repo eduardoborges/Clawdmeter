@@ -16,7 +16,9 @@ Shift+Tab over BLE HID for Claude Code's voice mode and mode-toggle shortcuts.
 
 The device boots into the splash. Tap the screen anywhere to switch to the Usage view; tap again to flip back to the splash.
 
-On the Usage view, swipe left for Stats: a heatmap of your Claude Code messages per day over the last 26 weeks, plus six numbers (sessions, total tokens, active days, longest and current streak, favorite model). The daemon reads them from `~/.claude/stats-cache.json`, the cache behind Claude Code's `/stats`, so they are as fresh as Claude Code last left that file.
+On the Usage view, swipe left for Today: your Claude Code messages per hour since midnight as 24 bars, with prompts, tool calls, tokens, sessions, the busiest project and active hours below. The daemon reads them from the session transcripts in every `~/.claude*/projects` folder, counts the main conversation only, and refreshes at most once a minute. The Windows daemon doesn't send them yet.
+
+Swipe again for Stats: a heatmap of your Claude Code messages per day over the last 26 weeks, plus six numbers (sessions, total tokens, active days, longest and current streak, favorite model). The daemon reads them from `~/.claude/stats-cache.json`, the cache behind Claude Code's `/stats`, so they are as fresh as Claude Code last left that file.
 
 Swipe left once more for Sessions, one row per open Claude Code session: its project folder, whether it needs you, is working or is done, and for how long. Sessions that need you are listed first. The list comes from the hooks in [Attention alerts](#attention-alerts-optional) plus two more, `Stop` and `SessionEnd`. The Windows daemon doesn't send this list yet.
 
@@ -284,11 +286,14 @@ Stats messages go to RX as well, tagged with a `k` kind. Firmware that takes the
 { "k": "hm", "n": 180, "h": "AAAFHFK...", "mo": [["Apr", 0], ["May", 3]] }
 { "k": "st", "v": [["Sessions", "584"], ["Total tokens", "43.4b"]] }
 { "k": "ss", "v": [["Clawdmeter", "a", 2], ["bulk", "w", 0]] }
+{ "k": "td", "h": "200000100112745820000000", "v": [["Prompts", "53"], ["Tokens", "148.0m"]] }
 ```
 
 `hm` is the heatmap: week columns from the oldest Sunday, `n` valid days, `h` levels 0 to 4 packed two days per character (`'A' + 5 * first + second`), `mo` month labels by column. `st` holds up to six label and value pairs, already formatted.
 
 `ss` lists the open sessions: project, state (`a` needs you, `w` working, `d` done) and minutes in that state.
+
+`td` is today's activity: `h` holds messages per hour as 24 digits, 0 to 8 relative to the busiest hour, and `v` the six label and value pairs.
 
 ## Development
 

@@ -493,8 +493,11 @@ static void build_idle_group(lv_obj_t* parent) {
 static const StatsData* stats_data = nullptr;
 static lv_obj_t* stats_empty;
 static lv_obj_t* heat_obj;
-static lv_obj_t* stat_name[6];
-static lv_obj_t* stat_value[6];
+// Two columns of stats, each a dim name over its value. Shared by the Stats
+// and Today workspaces.
+struct StatGrid { lv_obj_t* name[6]; lv_obj_t* value[6]; };
+static StatGrid stats_grid;
+static int32_t  stat_grid_y;   // top of the grid, under the heatmap
 static int32_t   heat_label_w, heat_pitch, heat_cell, heat_text_h;
 
 static int32_t text_width(const char* txt, const lv_font_t* font) {
@@ -561,6 +564,36 @@ static void heat_draw_cb(lv_event_t* e) {
     heat_text(layer, &t, "Less", x - 6 - text_width("Less", t.font), ly);
 }
 
+static void build_stat_grid(lv_obj_t* tile, StatGrid* g) {
+    const int32_t row_h = heat_text_h + lv_font_get_line_height(L.stat_value_font) + 4;
+    for (int i = 0; i < 6; i++) {
+        const int32_t x = L.margin + (i % 2) * (L.content_w / 2);
+        const int32_t y = stat_grid_y + (i / 2) * row_h;
+        g->name[i] = lv_label_create(tile);
+        lv_obj_set_style_text_font(g->name[i], L.stat_label_font, 0);
+        lv_obj_set_style_text_color(g->name[i], COL_DIM, 0);
+        lv_obj_set_pos(g->name[i], x, y);
+        g->value[i] = lv_label_create(tile);
+        lv_obj_set_style_text_font(g->value[i], L.stat_value_font, 0);
+        lv_obj_set_style_text_color(g->value[i], COL_TEXT, 0);
+        lv_obj_set_pos(g->value[i], x, y + heat_text_h);
+        lv_obj_add_flag(g->name[i], LV_OBJ_FLAG_HIDDEN);
+        lv_obj_add_flag(g->value[i], LV_OBJ_FLAG_HIDDEN);
+    }
+}
+
+static void set_stat_grid(StatGrid* g, const StatPair* stat, uint8_t n) {
+    for (int i = 0; i < 6; i++) {
+        const bool shown = i < n && i / 2 < L.stat_rows;
+        if (shown) {
+            lv_label_set_text(g->name[i], stat[i].label);
+            lv_label_set_text(g->value[i], stat[i].value);
+        }
+        lv_obj_set_flag(g->name[i], LV_OBJ_FLAG_HIDDEN, !shown);
+        lv_obj_set_flag(g->value[i], LV_OBJ_FLAG_HIDDEN, !shown);
+    }
+}
+
 static void build_stats_workspace(lv_obj_t* tile) {
     heat_text_h  = lv_font_get_line_height(L.stat_label_font);
     heat_label_w = text_width("Mon", L.stat_label_font) + 6;
@@ -575,29 +608,69 @@ static void build_stats_workspace(lv_obj_t* tile) {
     lv_obj_set_pos(heat_obj, L.margin, L.content_y);
     lv_obj_add_event_cb(heat_obj, heat_draw_cb, LV_EVENT_DRAW_MAIN, NULL);
 
-    // Two columns under the heatmap, each stat a dim name over its value.
-    const int32_t row_h = heat_text_h + lv_font_get_line_height(L.stat_value_font) + 4;
-    const int32_t y0 = L.content_y + heat_h + 10;
-    for (int i = 0; i < 6; i++) {
-        const int32_t x = L.margin + (i % 2) * (L.content_w / 2);
-        const int32_t y = y0 + (i / 2) * row_h;
-        stat_name[i] = lv_label_create(tile);
-        lv_obj_set_style_text_font(stat_name[i], L.stat_label_font, 0);
-        lv_obj_set_style_text_color(stat_name[i], COL_DIM, 0);
-        lv_obj_set_pos(stat_name[i], x, y);
-        stat_value[i] = lv_label_create(tile);
-        lv_obj_set_style_text_font(stat_value[i], L.stat_value_font, 0);
-        lv_obj_set_style_text_color(stat_value[i], COL_TEXT, 0);
-        lv_obj_set_pos(stat_value[i], x, y + heat_text_h);
-        lv_obj_add_flag(stat_name[i], LV_OBJ_FLAG_HIDDEN);
-        lv_obj_add_flag(stat_value[i], LV_OBJ_FLAG_HIDDEN);
-    }
+    stat_grid_y = L.content_y + heat_h + 10;
+    build_stat_grid(tile, &stats_grid);
 
     stats_empty = lv_label_create(tile);
     lv_label_set_text(stats_empty, "No stats yet");
     lv_obj_set_style_text_font(stats_empty, L.pill_font, 0);
     lv_obj_set_style_text_color(stats_empty, COL_DIM, 0);
     lv_obj_center(stats_empty);
+}
+
+// ---- Today workspace: messages per hour as 24 bars, plus the stat grid, from
+// the daemon's "td" message.
+static const TodayData* today_data = nullptr;
+static lv_obj_t* today_empty;
+static lv_obj_t* hours_obj;
+static StatGrid  today_grid;
+
+static void hours_draw_cb(lv_event_t* e) {
+    if (!today_data) return;
+    lv_layer_t* layer = lv_event_get_layer(e);
+    lv_area_t a;
+    lv_obj_get_coords(lv_event_get_target_obj(e), &a);
+    const int32_t pitch = lv_area_get_width(&a) / 24;
+    const int32_t bar_w = pitch - LV_MAX(2, pitch / 4);
+    const int32_t base = a.y2 - heat_text_h - 4;   // bars stand on this line
+    const int32_t span = base - a.y1;
+
+    lv_draw_rect_dsc_t r;
+    lv_draw_rect_dsc_init(&r);
+    r.radius = 2;
+    for (int h = 0; h < 24; h++) {
+        const uint8_t lvl = today_data->hour[h];
+        const int32_t x = a.x1 + h * pitch;
+        const int32_t top = base - (lvl ? LV_MAX(4, span * lvl / 8) : 2);   // 2px stub for idle hours
+        const lv_area_t bar = { x, top, x + bar_w - 1, base - 1 };
+        r.bg_color = lvl ? COL_ACCENT : COL_BAR_BG;
+        lv_draw_rect(layer, &r, &bar);
+    }
+
+    lv_draw_label_dsc_t t;
+    lv_draw_label_dsc_init(&t);
+    t.font = L.stat_label_font;
+    t.color = COL_DIM;
+    static const char* const HOUR[] = { "0", "6", "12", "18" };
+    for (int i = 0; i < 4; i++)
+        heat_text(layer, &t, HOUR[i], a.x1 + i * 6 * pitch, base + 4);
+}
+
+static void build_today_workspace(lv_obj_t* tile) {
+    // Same footprint as the heatmap, so both grids sit at the same height.
+    hours_obj = lv_obj_create(tile);
+    lv_obj_remove_style_all(hours_obj);
+    lv_obj_clear_flag(hours_obj, LV_OBJ_FLAG_CLICKABLE);   // taps fall through to the tile
+    lv_obj_set_size(hours_obj, L.content_w, stat_grid_y - 10 - L.content_y);
+    lv_obj_set_pos(hours_obj, L.margin, L.content_y);
+    lv_obj_add_event_cb(hours_obj, hours_draw_cb, LV_EVENT_DRAW_MAIN, NULL);
+    build_stat_grid(tile, &today_grid);
+
+    today_empty = lv_label_create(tile);
+    lv_label_set_text(today_empty, "Nothing yet today");
+    lv_obj_set_style_text_font(today_empty, L.pill_font, 0);
+    lv_obj_set_style_text_color(today_empty, COL_DIM, 0);
+    lv_obj_center(today_empty);
 }
 
 // ---- Sessions workspace: one row per open Claude Code session, project name
@@ -645,6 +718,7 @@ static void build_sessions_workspace(lv_obj_t* tile) {
 // them while the header, status line and mascot stay put. Taps bubble up to
 // usage_container, where a tap toggles the splash.
 static lv_obj_t* ws_view;
+static lv_obj_t* ws_today;
 static lv_obj_t* ws_stats;
 static lv_obj_t* ws_sessions;
 
@@ -653,7 +727,8 @@ static void ws_changed_cb(lv_event_t* e) {
     (void)e;
     if (clock_base_epoch > 0) return;
     const lv_obj_t* tile = lv_tileview_get_tile_active(ws_view);
-    lv_label_set_text(lbl_title, tile == ws_stats ? "Stats" : tile == ws_sessions ? "Sessions" : "Usage");
+    lv_label_set_text(lbl_title, tile == ws_today ? "Today" : tile == ws_stats ? "Stats"
+                               : tile == ws_sessions ? "Sessions" : "Usage");
 }
 
 static lv_obj_t* add_workspace(uint8_t col, lv_dir_t dir) {
@@ -680,10 +755,12 @@ static void init_usage_screen(lv_obj_t* scr) {
     lv_obj_set_scrollbar_mode(ws_view, LV_SCROLLBAR_MODE_OFF);
     lv_obj_add_flag(ws_view, LV_OBJ_FLAG_EVENT_BUBBLE);
     lv_obj_t* ws_usage = add_workspace(0, LV_DIR_RIGHT);
-    ws_stats = add_workspace(1, LV_DIR_HOR);
-    ws_sessions = add_workspace(2, LV_DIR_LEFT);
+    ws_today = add_workspace(1, LV_DIR_HOR);
+    ws_stats = add_workspace(2, LV_DIR_HOR);
+    ws_sessions = add_workspace(3, LV_DIR_LEFT);
     lv_obj_add_event_cb(ws_view, ws_changed_cb, LV_EVENT_VALUE_CHANGED, NULL);
-    build_stats_workspace(ws_stats);
+    build_stats_workspace(ws_stats);   // first: it sets the grid position Today reuses
+    build_today_workspace(ws_today);
     build_sessions_workspace(ws_sessions);
 
     lbl_title = lv_label_create(usage_container);
@@ -1102,17 +1179,7 @@ void ui_hide_alert(void) {
 void ui_update_stats(const StatsData* stats) {
     stats_data = stats;
     if (stats->days || stats->stats) lv_obj_add_flag(stats_empty, LV_OBJ_FLAG_HIDDEN);
-    for (int i = 0; i < 6; i++) {
-        if (i < stats->stats && i / 2 < L.stat_rows) {
-            lv_label_set_text(stat_name[i], stats->stat[i].label);
-            lv_label_set_text(stat_value[i], stats->stat[i].value);
-            lv_obj_clear_flag(stat_name[i], LV_OBJ_FLAG_HIDDEN);
-            lv_obj_clear_flag(stat_value[i], LV_OBJ_FLAG_HIDDEN);
-        } else {
-            lv_obj_add_flag(stat_name[i], LV_OBJ_FLAG_HIDDEN);
-            lv_obj_add_flag(stat_value[i], LV_OBJ_FLAG_HIDDEN);
-        }
-    }
+    set_stat_grid(&stats_grid, stats->stat, stats->stats);
     lv_obj_invalidate(heat_obj);
 }
 
@@ -1136,4 +1203,11 @@ void ui_update_sessions(const SessionsData* sessions) {
         lv_obj_set_style_text_color(sess_name[i], r.state == 'd' ? COL_DIM : COL_TEXT, 0);
         lv_obj_set_style_text_color(sess_state[i], col, 0);
     }
+}
+
+void ui_update_today(const TodayData* today) {
+    today_data = today;
+    lv_obj_set_flag(today_empty, LV_OBJ_FLAG_HIDDEN, today->stats > 0);
+    set_stat_grid(&today_grid, today->stat, today->stats);
+    lv_obj_invalidate(hours_obj);
 }

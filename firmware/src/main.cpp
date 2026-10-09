@@ -143,7 +143,23 @@ static void parse_sessions(JsonDocument& doc) {
     }
 }
 
-enum ParseResult { PARSE_ERROR, PARSE_USAGE, PARSE_STATS, PARSE_SESSIONS };
+static TodayData today;
+
+static void parse_today(JsonDocument& doc) {
+    const char* h = doc["h"] | "";
+    for (int i = 0; i < 24; i++) {
+        const int v = h[0] ? *h++ - '0' : 0;
+        today.hour[i] = (v >= 0 && v <= 8) ? v : 0;
+    }
+    today.stats = 0;
+    for (JsonArray v : doc["v"].as<JsonArray>()) {
+        if (today.stats == 6) break;
+        strlcpy(today.stat[today.stats].label, v[0] | "", sizeof(today.stat[0].label));
+        strlcpy(today.stat[today.stats++].value, v[1] | "", sizeof(today.stat[0].value));
+    }
+}
+
+enum ParseResult { PARSE_ERROR, PARSE_USAGE, PARSE_STATS, PARSE_SESSIONS, PARSE_TODAY };
 
 // Parse a JSON line into UsageData, or into StatsData for a stats message.
 static ParseResult parse_json(const char* json, UsageData* out) {
@@ -152,6 +168,10 @@ static ParseResult parse_json(const char* json, UsageData* out) {
     if (err) {
         Serial.printf("JSON parse error: %s\n", err.c_str());
         return PARSE_ERROR;
+    }
+    if (doc["k"] == "td") {
+        parse_today(doc);
+        return PARSE_TODAY;
     }
     if (doc["k"] == "ss") {
         parse_sessions(doc);
@@ -435,6 +455,9 @@ void loop() {
         const ParseResult parsed = parse_json(ble_get_data(), &usage);
         if (parsed == PARSE_STATS) {
             ui_update_stats(&stats);
+            ble_send_ack();
+        } else if (parsed == PARSE_TODAY) {
+            ui_update_today(&today);
             ble_send_ack();
         } else if (parsed == PARSE_SESSIONS) {
             ui_update_sessions(&sessions);
