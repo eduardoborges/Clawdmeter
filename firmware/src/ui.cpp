@@ -332,7 +332,7 @@ static lv_obj_t* make_panel(lv_obj_t* parent, int x, int y, int w, int h) {
     lv_obj_set_size(panel, w, h);
     lv_obj_set_style_bg_color(panel, COL_PANEL, 0);
     lv_obj_set_style_bg_opa(panel, LV_OPA_COVER, 0);
-    lv_obj_set_style_radius(panel, 8, 0);
+    lv_obj_set_style_radius(panel, 12, 0);
     lv_obj_set_style_border_width(panel, 0, 0);
     lv_obj_set_style_pad_left(panel, L.panel_pad_x, 0);
     lv_obj_set_style_pad_right(panel, L.panel_pad_x, 0);
@@ -351,10 +351,10 @@ static lv_obj_t* make_bar(lv_obj_t* parent, int x, int y, int w, int h) {
     lv_bar_set_value(bar, 0, LV_ANIM_OFF);
     lv_obj_set_style_bg_color(bar, COL_BAR_BG, LV_PART_MAIN);
     lv_obj_set_style_bg_opa(bar, LV_OPA_COVER, LV_PART_MAIN);
-    lv_obj_set_style_radius(bar, 6, LV_PART_MAIN);
+    lv_obj_set_style_radius(bar, LV_RADIUS_CIRCLE, LV_PART_MAIN);
     lv_obj_set_style_bg_color(bar, COL_ACCENT, LV_PART_INDICATOR);
     lv_obj_set_style_bg_opa(bar, LV_OPA_COVER, LV_PART_INDICATOR);
-    lv_obj_set_style_radius(bar, 6, LV_PART_INDICATOR);
+    lv_obj_set_style_radius(bar, LV_RADIUS_CIRCLE, LV_PART_INDICATOR);
     return bar;
 }
 
@@ -598,6 +598,7 @@ static void build_stats_workspace(lv_obj_t* tile) {
 static lv_obj_t* sess_empty;
 static lv_obj_t* sess_name[SESSION_ROWS];
 static lv_obj_t* sess_state[SESSION_ROWS];
+static lv_obj_t* sess_rule[SESSION_ROWS];   // hairline under each row
 
 static void build_sessions_workspace(lv_obj_t* tile) {
     // Rows share the space between the header and the status line.
@@ -615,8 +616,15 @@ static void build_sessions_workspace(lv_obj_t* tile) {
         sess_state[i] = lv_label_create(tile);
         lv_obj_set_style_text_font(sess_state[i], font, 0);
         lv_obj_align(sess_state[i], LV_ALIGN_TOP_RIGHT, -L.margin, y);
+        sess_rule[i] = lv_obj_create(tile);
+        lv_obj_remove_style_all(sess_rule[i]);
+        lv_obj_set_style_bg_color(sess_rule[i], COL_BAR_BG, 0);
+        lv_obj_set_style_bg_opa(sess_rule[i], LV_OPA_COVER, 0);
+        lv_obj_set_size(sess_rule[i], L.content_w, 1);
+        lv_obj_set_pos(sess_rule[i], L.margin, y + (pitch + line_h) / 2);
         lv_obj_add_flag(sess_name[i], LV_OBJ_FLAG_HIDDEN);
         lv_obj_add_flag(sess_state[i], LV_OBJ_FLAG_HIDDEN);
+        lv_obj_add_flag(sess_rule[i], LV_OBJ_FLAG_HIDDEN);
     }
 
     sess_empty = lv_label_create(tile);
@@ -1108,6 +1116,7 @@ void ui_update_sessions(const SessionsData* sessions) {
         const bool shown = i < sessions->rows;
         lv_obj_set_flag(sess_name[i], LV_OBJ_FLAG_HIDDEN, !shown);
         lv_obj_set_flag(sess_state[i], LV_OBJ_FLAG_HIDDEN, !shown);
+        lv_obj_set_flag(sess_rule[i], LV_OBJ_FLAG_HIDDEN, i + 1 >= sessions->rows);
         if (!shown) continue;
         const auto& r = sessions->row[i];
         const char* state = r.state == 'a' ? "needs you" : r.state == 'w' ? "working" : "done";
