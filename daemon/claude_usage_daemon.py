@@ -31,6 +31,7 @@ _REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if _REPO_ROOT not in sys.path:
     sys.path.insert(0, _REPO_ROOT)
 from daemon.stats import STATS_CACHE, load_messages as load_stats_messages  # noqa: E402
+from daemon.sessions import sessions_message  # noqa: E402
 
 DEVICE_NAME = "Clawdmeter"
 SERVICE_UUID = "4c41555a-4465-7669-6365-000000000001"
@@ -854,6 +855,7 @@ async def connect_and_run(target, stop_event: asyncio.Event) -> bool:
     alert_unsent = False
     clear_unsent = False
     stats_sent = None       # stats-cache.json mtime last sent to the device
+    sessions_sent = None    # last sessions message sent to the device
     try:
         while client.is_connected and not stop_event.is_set():
             now = time.time()
@@ -925,6 +927,14 @@ async def connect_and_run(target, stop_event: asyncio.Event) -> bool:
                     sent = await session.write_payload(msg) and sent
                 if sent:
                     stats_sent = stats_mtime
+
+            # The sessions workspace: resend when a session or its age in minutes
+            # changes. Stats-capable firmware routes by "k"; older firmware would
+            # read the message as an empty usage payload.
+            if session.takes_stats and used_successfully:
+                msg = sessions_message()
+                if msg != sessions_sent and await session.write_payload(msg):
+                    sessions_sent = msg
 
             try:
                 await asyncio.wait_for(session.refresh_requested.wait(), timeout=TICK)

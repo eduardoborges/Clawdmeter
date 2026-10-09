@@ -9,6 +9,7 @@ DAEMON="$(dirname "$0")/../claude-usage-daemon.sh"
 extract() { awk -v fn="$1" '$0 ~ "^"fn"\\(\\) \\{"{f=1} f{print} f&&/^\}/{exit}' "$DAEMON"; }
 eval "$(extract firmware_takes_stats)"
 eval "$(extract send_stats)"
+eval "$(extract send_sessions)"
 
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
@@ -45,5 +46,20 @@ check "changed cache: resend"      "$(writes)" "4"
 TAKES_STATS=0 STATS_SENT=""
 send_stats
 check "old firmware: nothing sent" "$(writes)" "4"
+
+# send_sessions() sends daemon/sessions.py's message when it changes.
+SESSIONS_PY="$(dirname "$0")/../sessions.py" SESSIONS_SENT=""
+export HOME="$TMP"
+mkdir -p "$TMP/.config/claude-usage-monitor/sessions"
+send_sessions
+check "sessions: old firmware: none" "$(writes)" "4"
+TAKES_STATS=1
+send_sessions
+check "sessions: sent"               "$(tail -1 "$TMP/writes")" '/org/bluez/rx {"k":"ss'
+send_sessions
+check "sessions: unchanged: none"    "$(writes)" "5"
+echo '{"p":"proj","e":"alert"}' > "$TMP/.config/claude-usage-monitor/sessions/abc"
+send_sessions
+check "sessions: changed: resend"    "$(writes)" "6"
 
 exit $fail

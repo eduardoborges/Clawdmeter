@@ -176,6 +176,21 @@ send_stats() {
     STATS_SENT=$mtime
 }
 
+# Sessions workspace: daemon/sessions.py lists the open Claude Code sessions
+# from the hook's files. Resent when a session or its age in minutes changes.
+SESSIONS_PY="$(dirname "$(readlink -f "$0")")/sessions.py"
+SESSIONS_SENT=""     # last sessions message sent to the device
+
+send_sessions() {
+    (( TAKES_STATS )) && [ -n "$LAST_PAYLOAD" ] || return 0
+    local msg
+    msg=$(python3 "$SESSIONS_PY") || return 0
+    [ "$msg" = "$SESSIONS_SENT" ] && return 0
+    log "Sessions: $msg"
+    write_gatt "$RX_CHAR_PATH" "$msg" || { log "Sessions write failed"; return 1; }
+    SESSIONS_SENT=$msg
+}
+
 heartbeat() {
     [ -z "$LAST_PAYLOAD" ] && return 1
     local now aged
@@ -707,7 +722,7 @@ while true; do
         continue
     fi
     log "GATT RX path: $RX_CHAR_PATH"
-    TAKES_STATS=0 STATS_SENT=""
+    TAKES_STATS=0 STATS_SENT="" SESSIONS_SENT=""
     firmware_takes_stats && TAKES_STATS=1 || log "Firmware doesn't take stats; not sending them"
 
     BACKOFF=1  # reset backoff on successful connection
@@ -743,6 +758,7 @@ while true; do
             heartbeat
         fi
         send_stats
+        send_sessions
         sleep "$TICK"
     done
 
