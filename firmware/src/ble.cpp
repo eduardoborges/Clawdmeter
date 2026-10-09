@@ -72,8 +72,10 @@ static const uint16_t DESIRED_TIMEOUT   = 600;   // ×10ms = 6s, matches PPCP
 static volatile uint16_t param_fix_handle = CONN_HANDLE_NONE;  // pending retry
 static volatile uint32_t param_fix_at_ms  = 0;                 // when to send it
 static volatile uint16_t param_fix_spent  = CONN_HANDLE_NONE;  // one per connection
-static char rx_buf[BLE_BUF_SIZE];
-static volatile bool data_ready = false;
+// Writes can land back to back (a usage payload, then the stats messages)
+// faster than loop() reads them, so they queue instead of sharing one buffer.
+static QueueHandle_t rx_queue;
+static char rx_buf[BLE_BUF_SIZE];      // the message loop() is handling
 static volatile bool has_received_data = false;
 static char mac_str[18];
 
@@ -277,11 +279,12 @@ class RxCallbacks : public NimBLECharacteristicCallbacks {
             Serial.printf("BLE: dropping RX write from non-owner %s\n", id.c_str());
             return;
         }
+        static char msg[BLE_BUF_SIZE];   // only the NimBLE host task writes here
         std::string val = chr->getValue();
         size_t len = std::min(val.length(), (size_t)(BLE_BUF_SIZE - 1));
-        memcpy(rx_buf, val.c_str(), len);
-        rx_buf[len] = '\0';
-        data_ready = true;
+        memcpy(msg, val.c_str(), len);
+        msg[len] = '\0';
+        if (xQueueSend(rx_queue, msg, 0) != pdTRUE) Serial.println("BLE: RX queue full, dropping write");
         has_received_data = true;
     }
 };
@@ -299,6 +302,7 @@ class ReqCallbacks : public NimBLECharacteristicCallbacks {
 };
 
 void ble_init(void) {
+    rx_queue = xQueueCreate(4, BLE_BUF_SIZE);
     NimBLEDevice::init(DEVICE_NAME);
     NimBLEDevice::setSecurityAuth(true, false, true);  // bonding, no MITM, SC
 
@@ -410,11 +414,11 @@ bool ble_has_bonds(void) {
 }
 
 bool ble_has_data(void) {
-    return data_ready;
+    return uxQueueMessagesWaiting(rx_queue) > 0;
 }
 
 const char* ble_get_data(void) {
-    data_ready = false;
+    if (xQueueReceive(rx_queue, rx_buf, 0) != pdTRUE) rx_buf[0] = '\0';
     return rx_buf;
 }
 
