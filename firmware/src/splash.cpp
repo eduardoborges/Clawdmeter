@@ -442,7 +442,14 @@ static int  big_dx = 0;                // attention Clawd's px offset from his c
 static int  big_cell = 12;             // px per art cell for the attention Clawd
 static int  big_x0 = 0;                // px of stage x 0, chosen so he is centered
 static int  big_feet_y = 420;
-static uint8_t big_act = 0;            // 0 waving, 1 pointing
+static uint8_t big_act = 0;            // index into the big Clawd's act pair
+// The big Clawd alternates two acts: waving and pointing for an alert, dancing
+// and jumping for a celebration, which ends on its own after PARTY_LEN acts.
+static const char *const ATTN_ACTS[2]  = { "waving",  "pointing" };
+static const char *const PARTY_ACTS[2] = { "dancing", "jumping"  };
+static const uint8_t PARTY_LEN = 4;
+static bool    mas_party = false;      // celebrating (splash_mascot_celebrate)
+static uint8_t party_left = 0;         // acts before the celebration ends
 static const splash_anim_def_t *mas_work = NULL;   // splash_mascot_work, NULL = idle
 static size_t  mas_buf_bytes = 0;
 static int     walk_ox = 0;            // stage x of the idle pose the corner slot holds
@@ -463,6 +470,10 @@ static const splash_anim_def_t* anim_by_name(const char *n) {
     for (int i = 0; i < SPLASH_ANIM_COUNT; i++)
         if (strcmp(splash_anims[i].name, n) == 0) return &splash_anims[i];
     return NULL;
+}
+
+static const char* big_act_name(void) {
+    return (mas_party ? PARTY_ACTS : ATTN_ACTS)[big_act];
 }
 
 static size_t anim_bytes(const splash_anim_def_t *a, int cell) {
@@ -563,14 +574,14 @@ lv_obj_t* splash_mascot_create(lv_obj_t *parent, int slot_x, int feet_y, int cel
     const splash_anim_def_t *walk = anim_by_name("walking");
     if (walk) big_x0 = (c.width - walk->w * big_cell) / 2 - walk->ox * big_cell;
     if (walk) walk_ox = walk->ox;
-    // The full-size image also carries the attention walk, wave and point.
+    // The full-size image also carries the big Clawd's walk and acts.
     size_t lurk_bytes = 0;
     if (lurk) {
-        static const char *const BIG[] = { "lurking", "walking", "waving", "pointing" };
+        static const char *const BIG[] = { "lurking", "walking", "waving", "pointing",
+                                           "dancing", "jumping" };
         for (const char *n : BIG) {
             const splash_anim_def_t *a = anim_by_name(n);
-            const int cl = (a == lurk) ? mas_lurk_cell : big_cell;
-            const size_t b = a ? (size_t)(a->w * cl) * (a->h * cl) * 3 : 0;
+            const size_t b = anim_bytes(a, (a == lurk) ? mas_lurk_cell : big_cell);
             if (b > lurk_bytes) lurk_bytes = b;
         }
     }
@@ -598,28 +609,45 @@ void splash_mascot_set_visible(bool v) {
         if (mas_attn) big_enter();              // an alert came in while hidden
         else          mas_show_still();         // restart clean at the slot
     } else {
+        mas_party = false;                      // went unseen; don't replay it
         lv_obj_add_flag(mas_img, LV_OBJ_FLAG_HIDDEN);
         if (mas_lurk_img) lv_obj_add_flag(mas_lurk_img, LV_OBJ_FLAG_HIDDEN);
+    }
+}
+
+// Bring the big Clawd on screen from wherever the corner one is.
+static void big_walk_on(void) {
+    if (mas_mode == MAS_LURK) {                 // already off screen
+        lv_obj_add_flag(mas_lurk_img, LV_OBJ_FLAG_HIDDEN);
+        big_enter();
+    } else if (mas_mode == MAS_ATTN_OUT) {
+        mas_mode = MAS_ATTN_IN;                 // was leaving: turn around
+    } else if (mas_mode != MAS_ATTN_OFF && mas_mode != MAS_ATTN_IN &&
+               mas_mode != MAS_ATTN_ACT) {      // in or near the slot: walk off
+        mas_anim = anim_by_name("walking");
+        mas_frame = 0;
+        mas_from_loop = false;
+        mas_frame_started = millis();
+        mas_face = -1;
+        mas_mode = MAS_ATTN_OFF;
     }
 }
 
 void splash_mascot_attention(bool on) {
     if (!mas_img || !mas_lurk_img || !mas_lurk_buf || on == mas_attn) return;
     mas_attn = on;
+    const bool partying = mas_party;
+    if (on) mas_party = false;                  // the alert takes over
     if (!mas_visible) return;                   // set_visible picks it up
     if (on) {
-        if (mas_mode == MAS_LURK) {             // already off screen
-            lv_obj_add_flag(mas_lurk_img, LV_OBJ_FLAG_HIDDEN);
-            big_enter();
-        } else if (mas_mode == MAS_ATTN_OUT) {
-            mas_mode = MAS_ATTN_IN;             // was leaving: turn around
-        } else {                                // in or near the slot: walk off
-            mas_anim = anim_by_name("walking");
+        if (partying && mas_mode == MAS_ATTN_ACT) {   // already out: start waving
+            big_act = 0;
+            mas_anim = anim_by_name(big_act_name());
             mas_frame = 0;
-            mas_from_loop = false;
             mas_frame_started = millis();
-            mas_face = -1;
-            mas_mode = MAS_ATTN_OFF;
+            big_render(mas_anim, 0, false);
+        } else {
+            big_walk_on();
         }
     } else if (mas_mode == MAS_ATTN_OFF) {
         mas_mode = MAS_WALK_IN;                 // hadn't left yet: come back
@@ -630,6 +658,14 @@ void splash_mascot_attention(bool on) {
         mas_frame_started = millis();
         mas_mode = MAS_ATTN_OUT;
     }
+}
+
+void splash_mascot_celebrate(void) {
+    if (!mas_img || !mas_lurk_img || !mas_lurk_buf || !mas_visible) return;
+    if (mas_attn || mas_party) return;
+    mas_party = true;
+    party_left = PARTY_LEN;
+    big_walk_on();
 }
 
 void splash_mascot_work(const char *anim_name) {
@@ -694,8 +730,16 @@ void splash_mascot_tick(void) {
         next = a->loop_start;                       // same work still running: keep looping
 
     if (next >= a->frame_count && mas_mode == MAS_ATTN_ACT) {
+        if (mas_party && --party_left == 0) {       // celebration over: leave
+            mas_party = false;
+            mas_anim = anim_by_name("walking");
+            mas_frame = 0;
+            mas_from_loop = false;
+            mas_mode = MAS_ATTN_OUT;
+            return;
+        }
         big_act ^= 1;                               // wave, point, wave, ...
-        mas_anim = anim_by_name(big_act ? "pointing" : "waving");
+        mas_anim = anim_by_name(big_act_name());
         mas_frame = 0;
         big_render(mas_anim, 0, false);
         return;
@@ -727,7 +771,7 @@ void splash_mascot_tick(void) {
         if (mas_mode == MAS_ATTN_IN && big_dx >= 0) {
             big_dx = 0;                             // on his spot: wave
             big_act = 0;
-            mas_anim = anim_by_name("waving");
+            mas_anim = anim_by_name(big_act_name());
             mas_frame = 0;
             mas_mode = MAS_ATTN_ACT;
             big_render(mas_anim, 0, false);

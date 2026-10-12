@@ -142,6 +142,8 @@ static void parse_sessions(JsonDocument& doc) {
         r.mins = v[2] | 0;
     }
     strlcpy(sessions.activity, doc["a"] | "", sizeof(sessions.activity));
+    sessions.done_id = doc["dn"] | 0UL;
+    sessions.beep = doc["b"].as<bool>();
 }
 
 static TodayData today;
@@ -466,6 +468,15 @@ void loop() {
         } else if (parsed == PARSE_SESSIONS) {
             ui_update_sessions(&sessions);
             splash_mascot_work(sessions.activity);
+            // The daemon repeats dn for a minute; celebrate each one once.
+            static uint32_t last_done_id = 0;
+            if (sessions.done_id && sessions.done_id != last_done_id) {
+                last_done_id = sessions.done_id;
+                Serial.println("task done — celebrate");
+                idle_note_activity();
+                if (sessions.beep) sound_hal_play_reset();
+                ui_celebrate();
+            }
             ble_send_ack();
         } else if (parsed == PARSE_USAGE) {
             int g_before = usage_rate_group();

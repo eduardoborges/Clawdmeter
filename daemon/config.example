@@ -41,6 +41,11 @@ chime = off
 #   off = silent (default)
 #   on  = chime through the board speaker (boards with audio: S3 AMOLED-2.16 / 1.8, LCD-1.54)
 beep = off
+
+# When a Claude Code task that ran at least this many minutes finishes, the
+# mascot walks on and celebrates (needs the hooks from the README). 0 = never.
+# The beep setting above adds the sound.
+done_after = 5
 # Show a clock on the Usage screen, in place of the "Usage" title.
 #   off  = no clock; the screen keeps showing "Usage" (default)
 #   auto = show the clock, auto-detecting 12h/24h from this machine's settings

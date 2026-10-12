@@ -23,3 +23,6 @@ void ui_update_battery(int percent, bool charging, bool usb_power);  // percent 
 // tap, after 2 minutes, or ui_hide_alert() when the session moves on.
 void ui_show_alert(const char* message);
 void ui_hide_alert(void);
+// A long Claude Code task finished: the full-size Clawd walks on, celebrates
+// and leaves on his own. Skipped while an alert is up.
+void ui_celebrate(void);

@@ -7,7 +7,8 @@
 #   attention-hook.sh stop    Stop
 #   attention-hook.sh end     SessionEnd
 # Every call also records the session's last event in sessions/<session id>,
-# with the last tool.
+# with the last tool, when the current task started (st) and when it
+# finished (fin, set only by Stop: the idle prompt rewrites the file later).
 # Hook stdout can reach the model, so print nothing and always exit 0.
 exec >/dev/null 2>&1
 PATH="/opt/homebrew/bin:/usr/local/bin:$PATH"
@@ -35,10 +36,13 @@ if [ "$1" = end ]; then
   rm -f "$f"
 else
   old=$(jq -c 'objects' "$f" 2>/dev/null); [ -n "$old" ] || old='{}'
-  printf '%s' "$in" | jq -c --arg e "$e" --argjson o "$old" '
+  printf '%s' "$in" | jq -c --arg e "$e" --argjson o "$old" --argjson now "$(date +%s)" '
       .hook_event_name as $h
       | {p: ((.cwd // "") | split("/") | last), e: $e,
-         t: (if $h == "PreToolUse" then .tool_name elif $h == "UserPromptSubmit" then "" else ($o.t // "") end)}' \
+         t: (if $h == "PreToolUse" then .tool_name elif $h == "UserPromptSubmit" then "" else ($o.t // "") end),
+         st: (if $h == "UserPromptSubmit" then $now else ($o.st // $now) end)}
+      | if $h == "Stop" then .fin = $now elif $h == "UserPromptSubmit" then . else .fin = $o.fin end
+      | del(.. | nulls)' \
     > "$D/sessions/.$s.$$" && mv "$D/sessions/.$s.$$" "$f"
 fi
 exit 0

@@ -1222,6 +1222,12 @@ void ui_hide_alert(void) {
     lv_timer_pause(alert_timer);
 }
 
+void ui_celebrate(void) {
+    if (alert_active) return;           // the alert's Clawd is already out
+    if (current_screen == SCREEN_SPLASH) ui_show_screen(SCREEN_USAGE);
+    splash_mascot_celebrate();
+}
+
 void ui_update_stats(const StatsData* stats) {
     stats_data = stats;
     if (stats->days || stats->stats) lv_obj_add_flag(stats_empty, LV_OBJ_FLAG_HIDDEN);

@@ -3,7 +3,7 @@
 import json
 import os
 
-from daemon.sessions import ACTIVE_MAX, MAX_AGE, ROWS, sessions_message
+from daemon.sessions import ACTIVE_MAX, DONE_FRESH, MAX_AGE, ROWS, sessions_message
 
 
 def write(d, sid, project, event, mtime):
@@ -52,19 +52,38 @@ def write_full(d, sid, mtime, **fields):
 
 def test_activity_follows_newest_working_session(tmp_path):
     now = 1_000_000.0
-    sessions = tmp_path
+    cfg = tmp_path / "config"
+    sessions = tmp_path / "s"
+    sessions.mkdir()
     write_full(sessions, "a", now - 30, e="clear", t="Grep")
     write_full(sessions, "b", now - 5, e="clear", t="Edit")
     write_full(sessions, "c", now - 1, e="stop", t="Bash")
-    assert sessions_message(sessions, now)["a"] == "laptop"
+    assert sessions_message(sessions, now, cfg)["a"] == "laptop"
     write_full(sessions, "b", now - ACTIVE_MAX, e="clear", t="Edit")
-    assert sessions_message(sessions, now)["a"] == "magnifier"
+    assert sessions_message(sessions, now, cfg)["a"] == "magnifier"
     write_full(sessions, "a", now - 2, e="clear", t="")
-    assert sessions_message(sessions, now)["a"] == "cloud"
+    assert sessions_message(sessions, now, cfg)["a"] == "cloud"
 
 
 def test_quiet_working_session_stops_animating(tmp_path):
     now = 1_000_000.0
     write_full(tmp_path, "a", now - ACTIVE_MAX, e="clear", t="Bash")
-    assert "a" not in sessions_message(tmp_path, now)
+    assert "a" not in sessions_message(tmp_path, now, tmp_path / "config")
 
+
+def test_long_task_finishing_is_announced_once(tmp_path):
+    now = 1_000_000.0
+    cfg = tmp_path / "config"
+    sessions = tmp_path / "s"
+    sessions.mkdir()
+    write_full(sessions, "long", now, e="stop", st=now - 400, fin=now - 10)
+    write_full(sessions, "short", now, e="stop", st=now - 100, fin=now - 5)
+    msg = sessions_message(sessions, now, cfg)
+    assert msg["dn"] == int(now - 10) and "b" not in msg
+    cfg.write_text("beep = on\n")
+    assert sessions_message(sessions, now, cfg)["b"] == 1
+    assert "dn" not in sessions_message(sessions, now + DONE_FRESH, cfg)
+    cfg.write_text("done_after = 10\n")
+    assert "dn" not in sessions_message(sessions, now, cfg)
+    cfg.write_text("done_after = 0\n")
+    assert "dn" not in sessions_message(sessions, now, cfg)

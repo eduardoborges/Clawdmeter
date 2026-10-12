@@ -233,12 +233,13 @@ When a Claude Code session is waiting on you (a permission prompt, a question, o
 }
 ```
 
-`Stop` and `SessionEnd` are only used by the Sessions workspace. Without `Stop`, a session that has finished its reply shows as working until Claude Code's idle prompt, about a minute later. Without `SessionEnd`, a closed session stays on the list for up to six hours.
+`Stop` and `SessionEnd` also feed the Sessions workspace. Without `Stop`, a session that has finished its reply shows as working until Claude Code's idle prompt, about a minute later, and finished tasks get no celebration. Without `SessionEnd`, a closed session stays on the list for up to six hours.
 
 Clawd walks back to his corner when you tap the screen, after 2 minutes, or when that session moves on (you answer, approve a tool, or send a prompt). He shows up about 5 seconds after Claude Code raises the notification, because the daemon checks once per tick. To hear a beep as well, set `beep = on` in `~/.config/claude-usage-monitor/config` (the installers ask). The macOS and Linux daemons handle these alerts; the Windows daemon doesn't yet.
 
 The same hooks drive the corner Clawd while Claude Code works. With the `PreToolUse` `*` entry he types on a laptop during shell commands and file edits, holds a magnifier while Claude reads, searches or fetches a page, and rides a cloud while it thinks or runs any other tool. He follows the newest working session. An interrupted reply never fires `Stop`, so he goes back to idling once a session has been quiet for 10 minutes.
-The macOS and Linux daemons send it; the Windows daemon doesn't yet.
+
+When a task that took at least 5 minutes finishes, the full-size Clawd walks on, dances and jumps a few times, then walks off. Set `done_after = <minutes>` in the config to change the threshold, or `0` to turn it off, and `beep = on` to hear the chime. The macOS and Linux daemons send both; the Windows daemon doesn't yet.
 
 ## How it works
 
@@ -296,7 +297,7 @@ Stats messages go to RX as well, tagged with a `k` kind. Firmware that takes the
 
 `hm` is the heatmap: week columns from the oldest Sunday, `n` valid days, `h` levels 0 to 4 packed two days per character (`'A' + 5 * first + second`), `mo` month labels by column. `st` holds up to six label and value pairs, already formatted.
 
-`ss` lists the open sessions: project, state (`a` needs you, `w` working, `d` done) and minutes in that state. `a` names the animation the corner Clawd plays while a session works (`laptop`, `magnifier` or `cloud`).
+`ss` lists the open sessions: project, state (`a` needs you, `w` working, `d` done) and minutes in that state. `a` names the animation the corner Clawd plays while a session works (`laptop`, `magnifier` or `cloud`). `dn` is the daemon's clock when a long task finished; the daemon repeats it for a minute and the firmware celebrates each value once, with a chime when `b` is set.
 
 `td` is today's activity: `h` holds messages per hour as 24 digits, 0 to 8 relative to the busiest hour, and `v` the six label and value pairs.
 
