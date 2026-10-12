@@ -318,15 +318,37 @@ static lv_color_t pct_color(float pct) {
     return pct >= 80.0f ? COL_RED : COL_ACCENT;
 }
 
-static void format_reset_time(int mins, char* buf, size_t len) {
+// Wall-clock time `secs_ahead` from now, in the daemon's hour format. Only
+// meaningful once the daemon has sent the clock (clock_base_epoch > 0).
+static void format_clock(long secs_ahead, char* buf, size_t len) {
+    time_t t = (time_t)(clock_base_epoch + (lv_tick_get() - clock_base_ms) / 1000 + secs_ahead);
+    struct tm tmv;
+    gmtime_r(&t, &tmv);   // epoch is already local wall-clock → gmtime keeps it as-is
+    if (clock_fmt == 12) {
+        int h12 = tmv.tm_hour % 12;
+        if (h12 == 0) h12 = 12;
+        snprintf(buf, len, "%d:%02d %s", h12, tmv.tm_min, tmv.tm_hour < 12 ? "AM" : "PM");
+    } else {
+        snprintf(buf, len, "%02d:%02d", tmv.tm_hour, tmv.tm_min);
+    }
+}
+
+// At the limit the reset is when Claude works again, so the line says when,
+// as a clock time if the daemon sends one.
+static void format_reset_time(int mins, bool at_limit, char* buf, size_t len) {
+    const char* verb = at_limit ? "Back in" : "Resets in";
     if (mins < 0) {
         snprintf(buf, len, "---");
+    } else if (at_limit && clock_base_epoch > 0 && mins < 1440) {
+        char t[12];
+        format_clock((long)mins * 60, t, sizeof(t));
+        snprintf(buf, len, "Back at %s", t);
     } else if (mins < 60) {
-        snprintf(buf, len, "Resets in %dm", mins);
+        snprintf(buf, len, "%s %dm", verb, mins);
     } else if (mins < 1440) {
-        snprintf(buf, len, "Resets in %dh %dm", mins / 60, mins % 60);
+        snprintf(buf, len, "%s %dh %dm", verb, mins / 60, mins % 60);
     } else {
-        snprintf(buf, len, "Resets in %dd %dh", mins / 1440, (mins % 1440) / 60);
+        snprintf(buf, len, "%s %dd %dh", verb, mins / 1440, (mins % 1440) / 60);
     }
 }
 
@@ -1016,7 +1038,7 @@ void ui_update(const UsageData* data) {
                         LV_ALIGN_OUT_RIGHT_TOP, 4, 12);
     } else {
         lv_label_set_text_fmt(lbl_session_pct, "%d%%", s_pct);
-        format_reset_time(data->session_reset_mins, buf, sizeof(buf));
+        format_reset_time(data->session_reset_mins, s_pct >= 100, buf, sizeof(buf));
         lv_label_set_text(lbl_session_reset, buf);
     }
 
@@ -1038,7 +1060,7 @@ void ui_update(const UsageData* data) {
         lv_label_set_text_fmt(lbl_weekly_pct, "%d%%", w_pct);
         lv_bar_set_value(bar_weekly, w_pct, LV_ANIM_ON);
         lv_obj_set_style_bg_color(bar_weekly, pct_color(data->weekly_pct), LV_PART_INDICATOR);
-        format_reset_time(data->weekly_reset_mins, buf, sizeof(buf));
+        format_reset_time(data->weekly_reset_mins, w_pct >= 100, buf, sizeof(buf));
         lv_label_set_text(lbl_weekly_reset, buf);
     }
 }
@@ -1078,18 +1100,11 @@ void ui_tick_anim(void) {
     if (clock_base_epoch > 0) {
         time_t cur = (time_t)(clock_base_epoch + (now - clock_base_ms) / 1000);
         struct tm tmv;
-        gmtime_r(&cur, &tmv);   // epoch is already local wall-clock → gmtime keeps it as-is
+        gmtime_r(&cur, &tmv);
         if (tmv.tm_min != clock_last_min) {   // only rewrite the title when the minute changes
             clock_last_min = tmv.tm_min;
             char tbuf[12];
-            if (clock_fmt == 12) {
-                int h12 = tmv.tm_hour % 12;
-                if (h12 == 0) h12 = 12;
-                snprintf(tbuf, sizeof(tbuf), "%d:%02d %s", h12, tmv.tm_min,
-                         tmv.tm_hour < 12 ? "AM" : "PM");
-            } else {
-                snprintf(tbuf, sizeof(tbuf), "%02d:%02d", tmv.tm_hour, tmv.tm_min);
-            }
+            format_clock(0, tbuf, sizeof(tbuf));
             lv_label_set_text(lbl_title, tbuf);
         }
     }
