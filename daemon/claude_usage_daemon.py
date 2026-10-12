@@ -429,7 +429,11 @@ async def poll_api(token: str) -> dict | None:
     if resp.status_code in (401, 403):
         log(f"API HTTP {resp.status_code} (token expired/invalid)")
         raise TokenExpired()
-    if resp.status_code >= 400:
+    # At the usage limit the API answers 429 but still sends the quota headers.
+    at_limit = resp.status_code == 429 and (
+        "anthropic-ratelimit-unified-5h-utilization" in resp.headers
+        or "anthropic-ratelimit-unified-overage-utilization" in resp.headers)
+    if resp.status_code >= 400 and not at_limit:
         log(f"API HTTP {resp.status_code}: {resp.text[:200]}")
         return None
 

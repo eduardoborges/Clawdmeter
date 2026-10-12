@@ -198,7 +198,11 @@ async def poll_api(token: str) -> dict | None:
         # "run claude login" toast.
         log(f"API HTTP {resp.status_code}: {resp.text[:200]}")
         raise AuthError(resp.status_code)
-    if resp.status_code >= 400:
+    # At the usage limit the API answers 429 but still sends the quota headers.
+    at_limit = resp.status_code == 429 and (
+        "anthropic-ratelimit-unified-5h-utilization" in resp.headers
+        or "anthropic-ratelimit-unified-overage-utilization" in resp.headers)
+    if resp.status_code >= 400 and not at_limit:
         # Other 4xx/5xx (rate-limit, server error) — transient, not a token issue.
         log(f"API HTTP {resp.status_code}: {resp.text[:200]}")
         return None
