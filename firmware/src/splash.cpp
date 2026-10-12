@@ -426,7 +426,7 @@ static int  mas_lurk_cell = 8;
 static int  mas_screen_w = 480;
 static bool mas_visible = false;
 
-enum MasMode { MAS_STILL, MAS_ACT, MAS_WALK_OFF, MAS_LURK, MAS_WALK_IN,
+enum MasMode { MAS_STILL, MAS_ACT, MAS_WORK, MAS_WALK_OFF, MAS_LURK, MAS_WALK_IN,
                MAS_ATTN_OFF, MAS_ATTN_IN, MAS_ATTN_ACT, MAS_ATTN_OUT };
 static MasMode mas_mode = MAS_STILL;
 static const splash_anim_def_t *mas_anim = NULL;
@@ -443,6 +443,9 @@ static int  big_cell = 12;             // px per art cell for the attention Claw
 static int  big_x0 = 0;                // px of stage x 0, chosen so he is centered
 static int  big_feet_y = 420;
 static uint8_t big_act = 0;            // 0 waving, 1 pointing
+static const splash_anim_def_t *mas_work = NULL;   // splash_mascot_work, NULL = idle
+static size_t  mas_buf_bytes = 0;
+static int     walk_ox = 0;            // stage x of the idle pose the corner slot holds
 
 // The corner mascot mirrors the splash's excitement: per usage-rate group,
 // how long he idles between acts and which acts he does. "lurking" means the
@@ -460,6 +463,10 @@ static const splash_anim_def_t* anim_by_name(const char *n) {
     for (int i = 0; i < SPLASH_ANIM_COUNT; i++)
         if (strcmp(splash_anims[i].name, n) == 0) return &splash_anims[i];
     return NULL;
+}
+
+static size_t anim_bytes(const splash_anim_def_t *a, int cell) {
+    return a ? (size_t)(a->w * cell) * (a->h * cell) * 3 : 0;
 }
 
 // Render one frame into a planar RGB565A8 image (alpha 0 outside the art) and
@@ -534,8 +541,15 @@ lv_obj_t* splash_mascot_create(lv_obj_t *parent, int slot_x, int feet_y, int cel
     mas_slot_x = slot_x;
     mas_feet_y = feet_y;
     mas_screen_w = board_caps().width;
-    // Buffer for the largest act bbox (pointing, 28×21 cells).
-    const size_t mas_bytes = (size_t)(28 * cell) * (21 * cell) * 3;
+    // Buffer for the largest corner act or work scene.
+    static const char *const CORNER[] = { "pointing", "waving", "dancing",
+                                          "laptop", "magnifier", "cloud" };
+    size_t mas_bytes = 0;
+    for (const char *n : CORNER) {
+        const size_t b = anim_bytes(anim_by_name(n), cell);
+        if (b > mas_bytes) mas_bytes = b;
+    }
+    mas_buf_bytes = mas_bytes;
     const splash_anim_def_t *lurk = anim_by_name("lurking");
     const BoardCaps& c = board_caps();
     int mind = (c.width < c.height) ? c.width : c.height;
@@ -548,6 +562,7 @@ lv_obj_t* splash_mascot_create(lv_obj_t *parent, int slot_x, int feet_y, int cel
     big_feet_y = c.height * 7 / 8;
     const splash_anim_def_t *walk = anim_by_name("walking");
     if (walk) big_x0 = (c.width - walk->w * big_cell) / 2 - walk->ox * big_cell;
+    if (walk) walk_ox = walk->ox;
     // The full-size image also carries the attention walk, wave and point.
     size_t lurk_bytes = 0;
     if (lurk) {
@@ -617,10 +632,24 @@ void splash_mascot_attention(bool on) {
     }
 }
 
+void splash_mascot_work(const char *anim_name) {
+    const splash_anim_def_t *a = (anim_name && anim_name[0]) ? anim_by_name(anim_name) : NULL;
+    mas_work = (anim_bytes(a, mas_cell) <= mas_buf_bytes) ? a : NULL;
+}
+
 void splash_mascot_tick(void) {
     if (!mas_img || !mas_visible || !mas_anim) return;
     const uint32_t now = millis();
 
+    if (mas_mode == MAS_STILL && mas_work) {      // Claude Code is working
+        mas_anim = mas_work;
+        mas_frame = 0;
+        mas_frame_started = now;
+        mas_from_loop = false;
+        mas_face = +1;
+        mas_mode = MAS_WORK;
+        return;
+    }
     if (mas_mode == MAS_STILL) {
         int g = usage_rate_group();
         if (g < 0 || g > 3) g = 0;
@@ -661,6 +690,8 @@ void splash_mascot_tick(void) {
                                mas_mode == MAS_ATTN_OUT);
     if (walking_mode && mas_frame == a->loop_end)
         next = a->loop_start;                       // walk: hold the gait loop
+    if (mas_mode == MAS_WORK && mas_frame == a->loop_end && a == mas_work)
+        next = a->loop_start;                       // same work still running: keep looping
 
     if (next >= a->frame_count && mas_mode == MAS_ATTN_ACT) {
         big_act ^= 1;                               // wave, point, wave, ...
@@ -761,8 +792,10 @@ void splash_mascot_tick(void) {
                    mas_lurk_cell, mas_screen_w - a->w * mas_lurk_cell,
                    (STAGE_ANCHOR_Y + a->oy + a->h) * mas_lurk_cell);
     } else {
+        // Work scenes are cropped wider than the idle pose; keep Clawd in his slot.
+        const int x = mas_x + (mas_mode == MAS_WORK ? (a->ox - walk_ox) * mas_cell : 0);
         mas_render(a, mas_frame, mas_face < 0, &mas_dsc, mas_buf, mas_img,
-                   mas_cell, mas_x, mas_feet_y);
+                   mas_cell, x, mas_feet_y);
     }
 }
 

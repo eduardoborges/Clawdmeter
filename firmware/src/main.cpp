@@ -141,6 +141,7 @@ static void parse_sessions(JsonDocument& doc) {
         r.state = (v[1] | "d")[0];
         r.mins = v[2] | 0;
     }
+    strlcpy(sessions.activity, doc["a"] | "", sizeof(sessions.activity));
 }
 
 static TodayData today;
@@ -464,6 +465,7 @@ void loop() {
             ble_send_ack();
         } else if (parsed == PARSE_SESSIONS) {
             ui_update_sessions(&sessions);
+            splash_mascot_work(sessions.activity);
             ble_send_ack();
         } else if (parsed == PARSE_USAGE) {
             int g_before = usage_rate_group();

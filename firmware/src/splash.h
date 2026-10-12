@@ -45,3 +45,6 @@ void splash_mascot_set_visible(bool v);
 // and points until attention(false), then they swap back. No-op without the
 // PSRAM mascot.
 void splash_mascot_attention(bool on);
+// What the corner Clawd acts out while Claude Code works: a splash animation
+// name looped until the name changes, or "" to go back to idling.
+void splash_mascot_work(const char *anim_name);

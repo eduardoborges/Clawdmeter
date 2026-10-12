@@ -3,7 +3,7 @@
 import json
 import os
 
-from daemon.sessions import MAX_AGE, ROWS, sessions_message
+from daemon.sessions import ACTIVE_MAX, MAX_AGE, ROWS, sessions_message
 
 
 def write(d, sid, project, event, mtime):
@@ -42,3 +42,29 @@ def test_prunes_stale_caps_rows_and_names(tmp_path):
 
 def test_empty(tmp_path):
     assert sessions_message(tmp_path / "missing", 0) == {"k": "ss", "v": []}
+
+
+def write_full(d, sid, mtime, **fields):
+    f = d / sid
+    f.write_text(json.dumps({"p": "p", **fields}))
+    os.utime(f, (mtime, mtime))
+
+
+def test_activity_follows_newest_working_session(tmp_path):
+    now = 1_000_000.0
+    sessions = tmp_path
+    write_full(sessions, "a", now - 30, e="clear", t="Grep")
+    write_full(sessions, "b", now - 5, e="clear", t="Edit")
+    write_full(sessions, "c", now - 1, e="stop", t="Bash")
+    assert sessions_message(sessions, now)["a"] == "laptop"
+    write_full(sessions, "b", now - ACTIVE_MAX, e="clear", t="Edit")
+    assert sessions_message(sessions, now)["a"] == "magnifier"
+    write_full(sessions, "a", now - 2, e="clear", t="")
+    assert sessions_message(sessions, now)["a"] == "cloud"
+
+
+def test_quiet_working_session_stops_animating(tmp_path):
+    now = 1_000_000.0
+    write_full(tmp_path, "a", now - ACTIVE_MAX, e="clear", t="Bash")
+    assert "a" not in sessions_message(tmp_path, now)
+

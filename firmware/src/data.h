@@ -54,4 +54,5 @@ struct SessionsData {
         uint16_t mins;       // minutes in that state when the daemon sent it
     } row[SESSION_ROWS];
     uint8_t rows;
+    char activity[12];       // animation the corner Clawd plays while a session works, "" = none
 };
