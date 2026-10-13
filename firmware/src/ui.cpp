@@ -1146,7 +1146,8 @@ void ui_tick_anim(void) {
     } else if (now - connected_at_ms < 5000) {
         text = "Connected";
     } else if (!s_working) {
-        text = "Listening";
+        lv_label_set_text(lbl_anim, "Idle");   // no spinner while Claude Code is idle
+        return;
     } else {
         text = anim_messages[anim_msg_idx];
     }
