@@ -135,11 +135,11 @@ def _decode_keychain_blob(raw: str) -> str:
     return raw
 
 
-def _read_token_keychain() -> str | None:
-    """Read the OAuth access token from the macOS Keychain, or None.
+def _read_keychain() -> str | None:
+    """Read the credentials blob from the macOS Keychain, or None.
 
     ``security … -w`` may hex-dump the stored secret (see _decode_keychain_blob),
-    so decode before extracting the access token.
+    so decode it here.
     """
     try:
         out = subprocess.run(
@@ -163,7 +163,7 @@ def _read_token_keychain() -> str | None:
     except (FileNotFoundError, subprocess.TimeoutExpired) as e:
         log(f"Keychain access error: {e}")
         return None
-    return _extract_access_token(_decode_keychain_blob(out.stdout))
+    return _decode_keychain_blob(out.stdout)
 
 
 def read_config_dirs() -> list[Path]:
@@ -190,8 +190,8 @@ def read_config_dirs() -> list[Path]:
     return dirs or [DEFAULT_CONFIG_DIR]
 
 
-def read_token_for(config_dir: Path) -> str | None:
-    """Read the OAuth token for one config dir.
+def read_creds_for(config_dir: Path) -> str | None:
+    """Read the credentials blob for one config dir.
 
     Linux: each dir keeps its own ``<dir>/.credentials.json``. macOS: Claude Code
     keeps the default dir's token in Keychain and can leave a stale
@@ -201,16 +201,34 @@ def read_token_for(config_dir: Path) -> str | None:
     there (documented follow-up).
     """
     if sys.platform == "darwin" and config_dir == DEFAULT_CONFIG_DIR:
-        tok = _read_token_keychain()
-        if tok:
-            return tok
+        blob = _read_keychain()
+        if blob and _extract_access_token(blob):
+            return blob
     cred = config_dir / ".credentials.json"
     try:
         if cred.exists():
-            return _extract_access_token(cred.read_text())
+            return cred.read_text()
     except OSError as e:
         log(f"Error reading credentials in {config_dir}: {e}")
     return None
+
+
+def read_token_for(config_dir: Path) -> str | None:
+    blob = read_creds_for(config_dir)
+    return _extract_access_token(blob) if blob else None
+
+
+def plan_label(blob: str | None) -> str | None:
+    """The subscription as the device shows it, e.g. "Max 20x", or None."""
+    try:
+        oauth = json.loads(blob or "").get("claudeAiOauth") or {}
+    except (json.JSONDecodeError, AttributeError):
+        return None
+    sub = oauth.get("subscriptionType")
+    if not isinstance(sub, str) or not sub:
+        return None
+    m = re.search(r"_(\d+x)$", oauth.get("rateLimitTier") or "")
+    return sub.capitalize() + (f" {m.group(1)}" if m else "")
 
 
 def load_cached_address() -> str | None:
@@ -601,6 +619,9 @@ async def poll_active(selector: PlanSelector = _SELECTOR) -> tuple[dict | None, 
         # dir counts as live and we stay silent rather than idling the device.
         any_live = True
         if payload is not None:
+            # ponytail: a second Keychain read per poll, once a minute.
+            if plan := plan_label(read_creds_for(d)):
+                payload["pl"] = plan
             payloads[d] = payload
             sessions[d] = int(payload.get("s", 0) or 0)
     if not payloads:

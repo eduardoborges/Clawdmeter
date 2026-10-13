@@ -6,6 +6,7 @@ Covers read_config_dirs, read_token_for, PlanSelector, and poll_active_payload.
 Run: python -m pytest daemon/tests/test_macos_multidir.py -x -q
 """
 import asyncio
+import json
 from pathlib import Path
 from unittest.mock import AsyncMock, patch
 
@@ -58,7 +59,7 @@ def test_token_for_default_dir_falls_back_to_keychain_on_macos(tmp_path, monkeyp
     # An empty dir standing in as the default: no file present -> Keychain.
     monkeypatch.setattr(mod, "DEFAULT_CONFIG_DIR", tmp_path)
     monkeypatch.setattr(mod.sys, "platform", "darwin")
-    with patch.object(mod, "_read_token_keychain", return_value="TOK_KEYCHAIN"):
+    with patch.object(mod, "_read_keychain", return_value='{"accessToken":"TOK_KEYCHAIN"}'):
         assert read_token_for(tmp_path) == "TOK_KEYCHAIN"
 
 
@@ -66,9 +67,9 @@ def test_token_for_keychain_wins_over_stale_file(tmp_path, monkeypatch):
     monkeypatch.setattr(mod, "DEFAULT_CONFIG_DIR", tmp_path)
     monkeypatch.setattr(mod.sys, "platform", "darwin")
     (tmp_path / ".credentials.json").write_text('{"accessToken":"TOK_FILE"}')
-    with patch.object(mod, "_read_token_keychain", return_value="TOK_KEYCHAIN"):
+    with patch.object(mod, "_read_keychain", return_value='{"accessToken":"TOK_KEYCHAIN"}'):
         assert read_token_for(tmp_path) == "TOK_KEYCHAIN"
-    with patch.object(mod, "_read_token_keychain", return_value=None):
+    with patch.object(mod, "_read_keychain", return_value=None):
         assert read_token_for(tmp_path) == "TOK_FILE"
 
 
@@ -201,3 +202,12 @@ def test_discover_target_non_darwin_returns_none_without_pin(monkeypatch):
     monkeypatch.setattr(mod.sys, "platform", "linux")
     monkeypatch.setattr(mod, "load_cached_address", lambda: None)
     assert _run(mod.discover_target()) is None
+
+
+def test_plan_label():
+    blob = lambda o: json.dumps({"claudeAiOauth": o})
+    assert mod.plan_label(blob({"subscriptionType": "max", "rateLimitTier": "default_claude_max_20x"})) == "Max 20x"
+    assert mod.plan_label(blob({"subscriptionType": "pro", "rateLimitTier": "default_claude_ai"})) == "Pro"
+    assert mod.plan_label(blob({})) is None
+    assert mod.plan_label("not json") is None
+    assert mod.plan_label(None) is None
