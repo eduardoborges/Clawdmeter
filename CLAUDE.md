@@ -164,7 +164,7 @@ hardware boards, not shared code).
 
 The firmware ships a `screenshot` serial command that dumps the LVGL framebuffer. `./screenshot.sh out.png [port]` captures a PNG sized to the active display (480×480 or 368×448). **Use this on every UI iteration** — Read the PNG with the Read tool, verify the change visually, iterate. Script auto-picks the macOS/Linux default port and falls back to pio's bundled Python if pyserial isn't on the system Python.
 
-The boot screen is `SCREEN_SPLASH` and only advances on a physical button press, so a fresh flash will sit on the splash. To screenshot the screen you're actually editing without asking the user to press a button, **temporarily change the default boot screen** in `main.cpp` (search for `ui_show_screen(SCREEN_SPLASH);`) to `SCREEN_USAGE` / `SCREEN_CONTROLLER` / `SCREEN_BLUETOOTH`, do your iteration, then revert before committing.
+The boot screen is `SCREEN_USAGE`, so a fresh flash lands there. Until usage arrives, the status line shows the link state (Connecting, Loading data, No data) under a small creature. To screenshot another screen without asking the user to press a button, **temporarily change the boot screen** in `main.cpp` (search for `ui_show_screen(SCREEN_USAGE);`), do your iteration, then revert before committing.
 
 ## Critical gotchas
 
@@ -215,7 +215,7 @@ foot-locked per-frame schedules and mirror when heading left. Usage-rate
 groups pick animations by name; the same rate drives the **corner mascot** on
 the usage screen (`splash_mascot_*`, PSRAM boards; C6 falls back to the static
 `clawd_still.h` icon) — idle stills, rate-scaled acts, and walk-off/lurk/
-walk-back trips. Default boot screen.
+walk-back trips. Tapping the usage screen opens it.
 
 **Where the animations come from / finding new ones:** all assets are plain
 files under `https://claude.ai/images/clawd/{core,persona}/…` — static assets

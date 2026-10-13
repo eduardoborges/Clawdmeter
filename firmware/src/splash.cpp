@@ -354,6 +354,8 @@ static int        mini_h = 0;
 static const splash_anim_def_t *mini_anim = NULL;
 static uint16_t   mini_frame = 0;
 static uint32_t   mini_started = 0;
+static int        mini_px = 0;
+static size_t     mini_cap = 0;    // bytes allocated for mini_buf
 
 static void mini_render(void) {
     if (!mini_buf || !mini_anim) return;
@@ -373,30 +375,51 @@ static void mini_render(void) {
     if (mini_canvas) lv_obj_invalidate(mini_canvas);
 }
 
-lv_obj_t* splash_mini_create(lv_obj_t *parent, const char *anim_name, int px) {
-    mini_anim = NULL;
+// Point the mini creature at `anim_name`, growing its buffer if needed.
+static bool mini_load(const char *anim_name) {
+    const splash_anim_def_t *a = NULL;
     for (int i = 0; i < SPLASH_ANIM_COUNT; i++) {
-        if (strcmp(splash_anims[i].name, anim_name) == 0) { mini_anim = &splash_anims[i]; break; }
+        if (strcmp(splash_anims[i].name, anim_name) == 0) { a = &splash_anims[i]; break; }
     }
-    if (!mini_anim) return NULL;
-    const int amax = (mini_anim->w > mini_anim->h) ? mini_anim->w : mini_anim->h;
-    mini_cell = px / amax;
-    if (mini_cell < 1) mini_cell = 1;
-    mini_w = mini_anim->w * mini_cell;
-    mini_h = mini_anim->h * mini_cell;
+    if (!a) return false;
+    const int amax = (a->w > a->h) ? a->w : a->h;
+    int cell = mini_px / amax;
+    if (cell < 1) cell = 1;
+    const size_t bytes = (size_t)a->w * cell * a->h * cell * 2;
+    if (bytes > mini_cap) {
 #ifdef BOARD_HAS_PSRAM
-    const uint32_t caps = MALLOC_CAP_SPIRAM;
+        const uint32_t caps = MALLOC_CAP_SPIRAM;
 #else
-    const uint32_t caps = MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT;
+        const uint32_t caps = MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT;
 #endif
-    mini_buf = (uint16_t*)heap_caps_malloc(mini_w * mini_h * 2, caps);
-    if (!mini_buf) return NULL;
-    mini_canvas = lv_canvas_create(parent);
-    lv_canvas_set_buffer(mini_canvas, mini_buf, mini_w, mini_h, LV_COLOR_FORMAT_RGB565);
+        uint16_t *buf = (uint16_t*)heap_caps_malloc(bytes, caps);
+        if (!buf) return false;
+        heap_caps_free(mini_buf);
+        mini_buf = buf;
+        mini_cap = bytes;
+    }
+    mini_anim = a;
+    mini_cell = cell;
+    mini_w = a->w * cell;
+    mini_h = a->h * cell;
+    if (mini_canvas) lv_canvas_set_buffer(mini_canvas, mini_buf, mini_w, mini_h, LV_COLOR_FORMAT_RGB565);
     mini_frame = 0;
     mini_started = millis();
     mini_render();
+    return true;
+}
+
+lv_obj_t* splash_mini_create(lv_obj_t *parent, const char *anim_name, int px) {
+    mini_px = px;
+    if (!mini_load(anim_name)) return NULL;
+    mini_canvas = lv_canvas_create(parent);
+    lv_canvas_set_buffer(mini_canvas, mini_buf, mini_w, mini_h, LV_COLOR_FORMAT_RGB565);
     return mini_canvas;
+}
+
+void splash_mini_set(const char *anim_name) {
+    if (mini_anim && strcmp(mini_anim->name, anim_name) == 0) return;
+    mini_load(anim_name);
 }
 
 void splash_mini_tick(void) {

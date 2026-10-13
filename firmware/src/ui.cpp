@@ -238,14 +238,21 @@ static lv_obj_t* logo_img;
 static lv_image_dsc_t battery_dscs[6];  // empty, low, medium, full, charging, plug-zap (no battery)
 
 // ---- Live-data freshness → which usage sub-view to show ----
-// usage panels when data is flowing, an idle "Zzz" screen when the host is
-// connected but no usage update landed within DATA_FRESH_MS, the pairing hint
-// when BLE is down. Re-evaluated every loop in ui_tick_anim().
-static lv_obj_t* idle_group;            // the "Zzz" idle screen
+// usage panels when data is flowing, the pairing hint when nothing is bonded,
+// and a waiting screen with a creature for everything in between (connecting,
+// loading, no data within DATA_FRESH_MS). Re-evaluated every loop in ui_tick_anim().
+static lv_obj_t* idle_group;            // the waiting screen
 static uint32_t  last_data_ms = 0;      // lv_tick when the last valid usage update landed
 static bool      data_received = false; // any valid update since boot
 static bool      data_ok = true;        // last payload's ok flag; a {"ok":false} beat = "no fresh data"
-static int       view_state = -1;       // -1 unknown / 0 pair / 1 idle / 2 usage
+static int       view_state = -1;       // -1 unknown / 0 pair / 1 waiting / 2 usage
+static bool      beat_since_connect = false;  // any payload, ok or not, since BLE connected
+static uint32_t  disconnected_at_ms = 0;      // boot counts as a disconnect
+static const uint32_t CONNECT_GRACE_MS = 30000;  // advertising this long with no host = not connected
+
+// What the device is waiting on. The status line names it and the creature on
+// the waiting screen jumps while something is on its way, sleeps when not.
+enum Link { LINK_UNPAIRED, LINK_CONNECTING, LINK_OFFLINE, LINK_LOADING, LINK_NO_DATA, LINK_LIVE };
 static const uint32_t DATA_FRESH_MS = 90000;  // usage counts as "live" within this window (daemon sends ~60s)
 
 // ---- Shared ----
@@ -494,9 +501,9 @@ static void build_pair_group(lv_obj_t* parent) {
     lv_obj_add_flag(pair_group, LV_OBJ_FLAG_HIDDEN);  // ui_update_ble_status decides
 }
 
-// Idle "Zzz" screen — shown when the host is connected but no usage update has
-// landed recently (token expired, daemon down, host asleep…). Full-screen, like
-// the pairing hint, so we never render hours-old numbers as if they were live.
+// Waiting screen: shown while connecting or loading, and when no usage update
+// has landed recently (token expired, daemon down, host asleep…). Full-screen,
+// like the pairing hint, so we never render hours-old numbers as if they were live.
 static void build_idle_group(lv_obj_t* parent) {
     idle_group = lv_obj_create(parent);
     lv_obj_set_size(idle_group, L.scr_w, L.scr_h - L.content_y);
@@ -507,9 +514,9 @@ static void build_idle_group(lv_obj_t* parent) {
     lv_obj_clear_flag(idle_group, LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_add_flag(idle_group, LV_OBJ_FLAG_EVENT_BUBBLE);
 
-    // A shrunk-down resting creature (the official cloud-ride animation)
-    // sits between the header and the status line; the animated "Listening…"
-    // status line carries the words, so no extra text is needed here.
+    // A shrunk-down creature sits between the header and the status line:
+    // jumping while a connection or data is on its way, riding a cloud when
+    // nothing is coming. The status line carries the words.
     lv_obj_t* creature = splash_mini_create(idle_group, "cloud", L.idle_px);
     if (creature) lv_obj_align(creature, LV_ALIGN_CENTER, 0, -20);
 
@@ -991,6 +998,7 @@ void ui_init(void) {
 void ui_update(const UsageData* data) {
     if (!data->valid) return;
     data_ok = data->ok;
+    beat_since_connect = true;
     if (!data->ok) return;          // a {"ok":false} "no data" beat → fall through to idle, keep last numbers
     last_data_ms = lv_tick_get();   // a real usage update just landed
     data_received = true;
@@ -1080,20 +1088,24 @@ void ui_update(const UsageData* data) {
     }
 }
 
-// Pick the usage-view sub-screen: pairing hint (BLE down), the idle "Zzz" screen
-// (connected but data has gone stale), or the live usage panels. Only re-lays-out
-// on an actual change. The animated status line stays visible everywhere — it
-// reads "Listening…" on the idle screen, keeping it alive rather than frozen.
+// Pick the usage-view sub-screen: pairing hint (nothing bonded), the waiting
+// screen, or the live usage panels. Only re-lays-out on an actual change. The
+// status line stays visible everywhere and names the link state.
+static Link link_state(uint32_t now) {
+    if (!s_ble_connected) {
+        if (!ble_has_bonds()) return LINK_UNPAIRED;
+        return now - disconnected_at_ms < CONNECT_GRACE_MS ? LINK_CONNECTING : LINK_OFFLINE;
+    }
+    if (data_received && data_ok && now - last_data_ms < DATA_FRESH_MS) return LINK_LIVE;
+    if (!beat_since_connect && now - connected_at_ms < DATA_FRESH_MS) return LINK_LOADING;
+    return LINK_NO_DATA;
+}
+
 static void update_view_state(void) {
     if (!usage_group || !pair_group || !idle_group) return;
-    int v;
-    if (!s_ble_connected) {
-        v = 0;  // pairing hint
-    } else if (data_received && data_ok && (lv_tick_get() - last_data_ms) < DATA_FRESH_MS) {
-        v = 2;  // live usage
-    } else {
-        v = 1;  // idle / Zzz
-    }
+    const Link link = link_state(lv_tick_get());
+    const int v = link == LINK_UNPAIRED ? 0 : link == LINK_LIVE ? 2 : 1;
+    if (v == 1) splash_mini_set(link == LINK_CONNECTING || link == LINK_LOADING ? "jumping" : "cloud");
     if (v == view_state) return;
     view_state = v;
     lv_obj_add_flag(pair_group, LV_OBJ_FLAG_HIDDEN);
@@ -1106,7 +1118,7 @@ static void update_view_state(void) {
 void ui_tick_anim(void) {
     if (current_screen != SCREEN_USAGE) return;
     update_view_state();
-    if (view_state == 1) splash_mini_tick();   // animate the sleeping creature on the idle screen
+    if (view_state == 1) splash_mini_tick();   // animate the creature on the waiting screen
 
     uint32_t now = lv_tick_get();
 
@@ -1137,19 +1149,26 @@ void ui_tick_anim(void) {
     anim_spinner_idx = (anim_phase < SPINNER_COUNT) ? anim_phase
                                                     : (SPINNER_PHASES - anim_phase);
 
-    // Status text by priority. Whimsical messages only while Claude Code works.
-    const char* text;
-    if (!s_ble_connected) {
-        text = "Waiting";              // advertising / waiting for a host connection
-    } else if (view_state == 1) {      // idle — alternate so it reads as alive AND data-less
-        text = (anim_msg_idx & 1) ? "No data" : "Listening";
-    } else if (now - connected_at_ms < 5000) {
-        text = "Connected";
-    } else if (!s_working) {
-        lv_label_set_text(lbl_anim, "Idle");   // no spinner while Claude Code is idle
+    // Status text by priority. The spinner runs only while something is
+    // happening; settled states are plain words. Whimsical messages only while
+    // Claude Code works.
+    const char* text = "";
+    const char* still = nullptr;
+    switch (link_state(now)) {
+    case LINK_UNPAIRED:   still = "Not paired"; break;
+    case LINK_CONNECTING: text = "Connecting"; break;
+    case LINK_OFFLINE:    still = "Not connected"; break;
+    case LINK_LOADING:    text = "Loading data"; break;
+    case LINK_NO_DATA:    still = "No data"; break;
+    case LINK_LIVE:
+        if (now - connected_at_ms < 5000) text = "Connected";
+        else if (!s_working)              still = "Idle";
+        else                              text = anim_messages[anim_msg_idx];
+        break;
+    }
+    if (still) {
+        lv_label_set_text(lbl_anim, still);
         return;
-    } else {
-        text = anim_messages[anim_msg_idx];
     }
 
     // All states share the whimsical style: "<glyph> <Title-case word>…"
@@ -1208,7 +1227,11 @@ void ui_update_ble_status(ble_state_t state, const char* name, const char* mac) 
     bool was_connected = s_ble_connected;
     s_ble_connected = (state == BLE_STATE_CONNECTED);
 
-    if (s_ble_connected && !was_connected) connected_at_ms = lv_tick_get();
+    if (s_ble_connected && !was_connected) {
+        connected_at_ms = lv_tick_get();
+        beat_since_connect = false;
+    }
+    if (!s_ble_connected && was_connected) disconnected_at_ms = lv_tick_get();
     // pair / idle / usage — picked from connection + data freshness.
     update_view_state();
 }

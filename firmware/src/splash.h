@@ -34,6 +34,8 @@ lv_obj_t* splash_get_root(void);
 // splash_mini_tick(). One mini creature at a time.
 lv_obj_t* splash_mini_create(lv_obj_t *parent, const char *anim_name, int px);
 void splash_mini_tick(void);
+// Switch the mini creature to another animation at the same px size.
+void splash_mini_set(const char *anim_name);
 
 // Corner mascot (usage screen, PSRAM boards): the still Clawd idles in the
 // logo slot, does occasional acts, and takes walk-off/lurk/walk-back trips.
