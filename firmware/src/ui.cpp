@@ -223,6 +223,7 @@ static lv_obj_t* bar_weekly;
 static lv_obj_t* lbl_weekly_pct;
 static lv_obj_t* lbl_weekly_label;
 static lv_obj_t* lbl_weekly_reset;
+static lv_obj_t* lbl_plan;   // plan pill, left of the Weekly pill
 static lv_obj_t* panel_session = nullptr;
 static lv_obj_t* panel_weekly = nullptr;
 // Enterprise-only widgets inside panel_session
@@ -878,6 +879,8 @@ static void init_usage_screen(lv_obj_t* scr) {
                      &bar_weekly, &lbl_weekly_reset);
     // Recolor enabled so enterprise period box can color pace and reset separately
     lv_label_set_recolor(lbl_weekly_reset, true);
+    lbl_plan = make_pill(panel_weekly, "");
+    lv_obj_add_flag(lbl_plan, LV_OBJ_FLAG_HIDDEN);
 
     build_pair_group(ws[WS_USAGE]);
     build_idle_group(ws[WS_USAGE]);
@@ -1062,6 +1065,15 @@ void ui_update(const UsageData* data) {
         lv_obj_set_style_bg_color(bar_weekly, pct_color(data->weekly_pct), LV_PART_INDICATOR);
         format_reset_time(data->weekly_reset_mins, w_pct >= 100, buf, sizeof(buf));
         lv_label_set_text(lbl_weekly_reset, buf);
+    }
+
+    if (!data->plan[0]) {
+        lv_obj_add_flag(lbl_plan, LV_OBJ_FLAG_HIDDEN);
+    } else {
+        lv_label_set_text(lbl_plan, data->plan);
+        lv_obj_clear_flag(lbl_plan, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_update_layout(panel_weekly);
+        lv_obj_align_to(lbl_plan, lbl_weekly_label, LV_ALIGN_OUT_LEFT_MID, -L.pill_pad_x / 2, 0);
     }
 }
 
