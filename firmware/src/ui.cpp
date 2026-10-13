@@ -252,6 +252,9 @@ static const uint32_t DATA_FRESH_MS = 90000;  // usage counts as "live" within t
 static lv_image_dsc_t logo_dsc;
 static screen_t current_screen = SCREEN_USAGE;
 static bool     s_ble_connected = false;   // cached BLE connection state
+// Claude Code is working. True until the daemon's first sessions message, so a
+// host without the hooks always shows the busy verbs.
+static bool s_working = true;
 static uint32_t connected_at_ms = 0;       // when we last entered CONNECTED ("Connected" dwell)
 
 // Animation state
@@ -1134,7 +1137,7 @@ void ui_tick_anim(void) {
     anim_spinner_idx = (anim_phase < SPINNER_COUNT) ? anim_phase
                                                     : (SPINNER_PHASES - anim_phase);
 
-    // Status text by priority. Whimsical messages only when connected & settled.
+    // Status text by priority. Whimsical messages only while Claude Code works.
     const char* text;
     if (!s_ble_connected) {
         text = "Waiting";              // advertising / waiting for a host connection
@@ -1142,6 +1145,8 @@ void ui_tick_anim(void) {
         text = (anim_msg_idx & 1) ? "No data" : "Listening";
     } else if (now - connected_at_ms < 5000) {
         text = "Connected";
+    } else if (!s_working) {
+        text = "Listening";
     } else {
         text = anim_messages[anim_msg_idx];
     }
@@ -1263,6 +1268,7 @@ void ui_update_stats(const StatsData* stats) {
 }
 
 void ui_update_sessions(const SessionsData* sessions) {
+    s_working = sessions->activity[0] != 0;
     char buf[24];
     lv_obj_set_flag(sess_empty, LV_OBJ_FLAG_HIDDEN, sessions->rows > 0);
     for (int i = 0; i < SESSION_ROWS; i++) {
