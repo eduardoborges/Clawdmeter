@@ -62,11 +62,13 @@ def test_token_for_default_dir_falls_back_to_keychain_on_macos(tmp_path, monkeyp
         assert read_token_for(tmp_path) == "TOK_KEYCHAIN"
 
 
-def test_token_for_file_wins_over_keychain(tmp_path, monkeypatch):
+def test_token_for_keychain_wins_over_stale_file(tmp_path, monkeypatch):
     monkeypatch.setattr(mod, "DEFAULT_CONFIG_DIR", tmp_path)
     monkeypatch.setattr(mod.sys, "platform", "darwin")
     (tmp_path / ".credentials.json").write_text('{"accessToken":"TOK_FILE"}')
     with patch.object(mod, "_read_token_keychain", return_value="TOK_KEYCHAIN"):
+        assert read_token_for(tmp_path) == "TOK_KEYCHAIN"
+    with patch.object(mod, "_read_token_keychain", return_value=None):
         assert read_token_for(tmp_path) == "TOK_FILE"
 
 
