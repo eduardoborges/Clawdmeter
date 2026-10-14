@@ -11,6 +11,6 @@
 
 void sound_hal_init(void);
 void sound_hal_tick(void);
-enum Sound { SOUND_RESET, SOUND_DONE, SOUND_ASK };
+enum Sound { SOUND_RESET, SOUND_ASK };
 
 void sound_hal_play(Sound s);

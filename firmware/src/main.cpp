@@ -258,7 +258,6 @@ static void check_serial_cmd() {
             cmd_buf[cmd_pos] = '\0';
             if (strcmp(cmd_buf, "screenshot") == 0) send_screenshot();
             else if (strcmp(cmd_buf, "buzz") == 0)  sound_hal_play(SOUND_RESET);
-            else if (strcmp(cmd_buf, "buzz done") == 0) sound_hal_play(SOUND_DONE);
             else if (strcmp(cmd_buf, "buzz ask") == 0)  sound_hal_play(SOUND_ASK);
             cmd_pos = 0;
         } else if (cmd_pos < CMD_BUF_SIZE - 1) {
@@ -477,7 +476,7 @@ void loop() {
                 last_done_id = sessions.done_id;
                 Serial.println("task done — celebrate");
                 idle_note_activity();
-                if (sessions.beep) sound_hal_play(SOUND_DONE);
+                if (sessions.beep) sound_hal_play(SOUND_RESET);
                 ui_celebrate();
             }
             ble_send_ack();

@@ -5,7 +5,7 @@
 // Board-agnostic ES8311 + I2S chime engine. A board's sound.cpp fills in a
 // ChimeConfig (its I2S pins, codec address, volume, and a power-amp enable
 // hook) and calls chime_init() once; chime_play() then streams one of the
-// embedded clips (bell/done/ask_pcm.h) to the codec in a one-shot FreeRTOS task so the LVGL
+// embedded clips (bell/ask_pcm.h) to the codec in a one-shot FreeRTOS task so the LVGL
 // loop never blocks. The embedded PCM is 44.1 kHz / 16-bit / stereo, so
 // cfg.sample_rate must be 44100 for correct-pitch playback.
 //
