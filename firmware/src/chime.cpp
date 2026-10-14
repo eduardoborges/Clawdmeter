@@ -3,6 +3,8 @@
 #include "ESP_I2S.h"
 #include "es8311.h"
 #include "bell_pcm.h"   // const uint8_t bell_pcm[] / bell_pcm_len — 44.1 kHz 16-bit stereo
+#include "done_pcm.h"
+#include "ask_pcm.h"
 
 // Shared ES8311 chime engine. See chime.h. Adapted from the original 2.16
 // sound.cpp so the 2.16, 1.8 (and any future ES8311 board) share one copy of
@@ -12,6 +14,14 @@ static I2SClass      i2s;
 static ChimeConfig   cfg;
 static bool          ready   = false;
 static volatile bool playing = false;
+
+struct Clip { const uint8_t* pcm; unsigned int len; };
+static const Clip clips[] = {               // indexed by Sound
+    { bell_pcm, bell_pcm_len },
+    { done_pcm, done_pcm_len },
+    { ask_pcm,  ask_pcm_len  },
+};
+static Clip current;
 
 static bool es8311_setup(void) {
     es8311_handle_t es = es8311_create(0, cfg.es8311_addr);   // I2C port 0 (shared Wire bus)
@@ -30,7 +40,7 @@ static bool es8311_setup(void) {
 static void chime_task(void* arg) {
     if (cfg.amp_enable) cfg.amp_enable(true);
     delay(8);                                  // let the amp settle (avoids turn-on pop)
-    i2s.write((uint8_t*)bell_pcm, bell_pcm_len);
+    i2s.write((uint8_t*)current.pcm, current.len);
     delay(20);
     if (cfg.amp_enable) cfg.amp_enable(false);
     playing = false;
@@ -56,8 +66,9 @@ bool chime_init(const ChimeConfig& c) {
     return true;
 }
 
-void chime_play(void) {
+void chime_play(Sound s) {
     if (!ready || playing) return;
+    current = clips[s];
     playing = true;
     if (xTaskCreatePinnedToCore(chime_task, "chime", 4096, nullptr, 1, nullptr, 0) != pdPASS)
         playing = false;   // couldn't spawn — stay silent rather than wedge the flag
