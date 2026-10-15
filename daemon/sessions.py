@@ -2,8 +2,9 @@
 """Open Claude Code sessions for the device's Sessions workspace.
 
 attention-hook.sh leaves one file per session in SESSIONS_DIR holding the
-project name, the git branch, the last hook event, the last tool and when the
-current task started; the file's mtime says when the last event happened.
+project name, the git branch, the session's title, the last hook event, the
+last tool and when the current task started; the file's mtime says when the
+last event happened.
 No third-party imports: the macOS daemon imports it, and the Linux daemon runs
 it as a script that prints the message.
 """
@@ -14,6 +15,7 @@ from pathlib import Path
 
 SESSIONS_DIR = Path.home() / ".config" / "claude-usage-monitor" / "sessions"
 ROWS = 6           # firmware's SESSION_ROWS must match
+MAX_BYTES = 511    # the firmware's BLE buffer, less the terminator
 MAX_AGE = 6 * 3600  # a session that crashed never fires SessionEnd
 # Hook event -> state: a = needs you, w = working, d = done (waiting for a prompt).
 STATE = {"alert": "a", "clear": "w", "stop": "d"}
@@ -78,7 +80,7 @@ def _doing(state: str, tool: str, agents: int = 0) -> str:
 
 def sessions_message(path: Path = SESSIONS_DIR, now: float | None = None,
                      config: Path = CONFIG_FILE) -> dict:
-    """{"k":"ss","v":[[project, state, minutes, doing, branch], ...]},
+    """{"k":"ss","v":[["project | title", state, minutes, doing, branch], ...]},
     sessions that need you first, then working, then done, newest first within
     each. Minutes count from the start of the task for a working session and
     from the last event otherwise. Doing and the branch share the row's second
@@ -113,8 +115,11 @@ def sessions_message(path: Path = SESSIONS_DIR, now: float | None = None,
             state = "w"   # its reply ended, but background agents still run
         start, fin = d.get("st"), d.get("fin")
         since = start if state == "w" and isinstance(start, (int, float)) else mtime
-        # 24 keeps six rows under the firmware's 512-byte buffer.
-        rows.append((state, mtime, _ascii(str(d.get("p") or "?"), 12), since,
+        name = _ascii(str(d.get("p") or "?"), 12)
+        title = _ascii(str(d.get("ti") or ""), 40)
+        if title:
+            name = f"{name} | {title}"[:40]
+        rows.append((state, mtime, name, since,
                      _doing(state, str(d.get("t") or ""), len(agents)),
                      _ascii(str(d.get("br") or ""), 24)))
         last = max([mtime, *agents])
@@ -133,6 +138,10 @@ def sessions_message(path: Path = SESSIONS_DIR, now: float | None = None,
         msg["dn"] = int(done)
         if _setting("beep", config) == "on":
             msg["b"] = 1
+    # Long titles can overflow the device's buffer. The last rows go first;
+    # they rarely fit on the screen anyway.
+    while msg["v"] and len(json.dumps(msg, separators=(",", ":"))) > MAX_BYTES:
+        msg["v"].pop()
     return msg
 
 

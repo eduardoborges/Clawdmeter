@@ -8,9 +8,9 @@
 #   attention-hook.sh end     SessionEnd
 #   attention-hook.sh subagent SubagentStop
 # Every call also records the session's last event in sessions/<session id>,
-# with the git branch, the last tool, when the current task started (st) and
-# when it finished (fin, set only by Stop: the idle prompt rewrites the file
-# later).
+# with the git branch, the session's title (a /rename wins over the generated
+# one), the last tool, when the current task started (st) and when it finished
+# (fin, set only by Stop: the idle prompt rewrites the file later).
 # Hook stdout can reach the model, so print nothing and always exit 0.
 exec >/dev/null 2>&1
 PATH="/opt/homebrew/bin:/usr/local/bin:$PATH"
@@ -52,9 +52,12 @@ if [ "$1" = end ]; then
 else
   old=$(jq -c 'objects' "$f" 2>/dev/null); [ -n "$old" ] || old='{}'
   br=$(git -C "$(printf '%s' "$in" | jq -r '.cwd // empty')" branch --show-current)
-  printf '%s' "$in" | jq -c --arg e "$e" --arg br "$br" --argjson o "$old" --argjson now "$(date +%s)" '
+  ti=$(LC_ALL=C grep -E '^\{"type":"(ai|custom)-title"' "$(printf '%s' "$in" | jq -r '.transcript_path // empty')" \
+    | jq -rs '(map(.customTitle // empty) | last) // (map(.aiTitle // empty) | last) // empty')
+  printf '%s' "$in" | jq -c --arg e "$e" --arg br "$br" --arg ti "$ti" --argjson o "$old" --argjson now "$(date +%s)" '
       .hook_event_name as $h
-      | {p: ((.cwd // "") | split("/") | last), br: (if $br == "" then null else $br end), e: $e,
+      | {p: ((.cwd // "") | split("/") | last), br: (if $br == "" then null else $br end),
+         ti: (if $ti == "" then null else $ti end), e: $e,
          t: (if $h == "PreToolUse" then .tool_name elif $h == "UserPromptSubmit" then "" else ($o.t // "") end),
          st: (if $h == "UserPromptSubmit" then $now else ($o.st // $now) end), ag: $o.ag}
       | if $h == "Stop" then .fin = $now elif $h == "UserPromptSubmit" then . else .fin = $o.fin end

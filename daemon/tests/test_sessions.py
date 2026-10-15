@@ -3,7 +3,7 @@
 import json
 import os
 
-from daemon.sessions import ACTIVE_MAX, DONE_FRESH, MAX_AGE, ROWS, sessions_message
+from daemon.sessions import ACTIVE_MAX, DONE_FRESH, MAX_AGE, MAX_BYTES, ROWS, sessions_message
 
 
 def write(d, sid, project, event, mtime):
@@ -127,3 +127,21 @@ def test_branch_rides_along(tmp_path):
     write_full(tmp_path, "b", now - 60, e="stop", br="feat/a-branch-name-that-goes-on")
     assert [r[4] for r in sessions_message(tmp_path, now, tmp_path / "config")["v"]] == [
         "main", "feat/a-branch-name-that-"]
+
+
+def test_title_follows_the_project(tmp_path):
+    now = 1_000_000.0
+    write_full(tmp_path, "a", now - 5, e="clear", ti="Sessões com subagents")
+    write_full(tmp_path, "b", now - 60, e="stop", ti="x" * 60)
+    assert [r[0] for r in sessions_message(tmp_path, now, tmp_path / "config")["v"]] == [
+        "p | Sessoes com subagents", "p | " + "x" * 36]
+
+
+def test_message_fits_the_device_buffer(tmp_path):
+    now = 1_000_000.0
+    for i in range(ROWS):
+        write_full(tmp_path, f"s{i}", now - i, p="a-very-long-project", e="alert",
+                   ti="t" * 60, br="b" * 60)
+    msg = sessions_message(tmp_path, now, tmp_path / "config")
+    assert 0 < len(msg["v"]) < ROWS
+    assert len(json.dumps(msg, separators=(",", ":"))) <= MAX_BYTES
