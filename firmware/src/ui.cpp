@@ -41,6 +41,7 @@ struct Layout {
     int16_t bar_h;
     int16_t panel_pad_x, panel_pad_y;
     int16_t pill_pad_x, pill_pad_y;
+    int16_t radius;                  // card corners
     const lv_font_t* title_font;     // screen title / clock
     const lv_font_t* pct_font;       // big percentage number
     const lv_font_t* ent_pct_font;   // enterprise spending number
@@ -90,8 +91,9 @@ static void compute_layout(const BoardCaps& c) {
     L.bar_h = 24;
     L.panel_pad_x = 16;
     L.panel_pad_y = 12;
-    L.pill_pad_x = 14;
+    L.pill_pad_x = 12;
     L.pill_pad_y = 4;
+    L.radius = 16;
     L.title_font   = &font_sans_56;
     L.pct_font     = &font_sans_56;
     L.ent_pct_font = &font_sans_56;
@@ -161,6 +163,7 @@ static void compute_layout(const BoardCaps& c) {
         L.panel_pad_y = 6;
         L.pill_pad_x = 8;
         L.pill_pad_y = 2;
+        L.radius = 8;
         L.title_font   = &font_sans_34;
         L.pct_font     = &font_sans_24;
         L.ent_pct_font = &font_sans_34;
@@ -195,15 +198,15 @@ static void compute_layout(const BoardCaps& c) {
     L.content_w = L.scr_w - 2 * L.margin;
 }
 
-// Anthropic brand palette — design tokens live in theme.h
+// Anthropic design system palette — design tokens live in theme.h
 #include "theme.h"
 #define COL_BG        THEME_BG
 #define COL_PANEL     THEME_PANEL
 #define COL_TEXT      THEME_TEXT
 #define COL_DIM       THEME_DIM
 #define COL_ACCENT    THEME_ACCENT
-#define COL_RED       THEME_RED
-#define COL_BAR_BG    THEME_BAR_BG
+#define COL_ALERT     THEME_ALERT
+#define COL_LINE      THEME_LINE
 
 // ---- Usage screen widgets (single non-splash view) ----
 static lv_obj_t* usage_container;
@@ -320,7 +323,7 @@ static const char* const anim_messages[] = {
 #define ANIM_MSG_COUNT (sizeof(anim_messages) / sizeof(anim_messages[0]))
 
 static lv_color_t pct_color(float pct) {
-    return pct >= 80.0f ? COL_RED : COL_ACCENT;
+    return pct >= 80.0f ? COL_ALERT : COL_ACCENT;
 }
 
 // Wall-clock time `secs_ahead` from now, in the daemon's hour format. Only
@@ -366,8 +369,9 @@ static lv_obj_t* make_panel(lv_obj_t* parent, int x, int y, int w, int h) {
     lv_obj_set_size(panel, w, h);
     lv_obj_set_style_bg_color(panel, COL_PANEL, 0);
     lv_obj_set_style_bg_opa(panel, LV_OPA_COVER, 0);
-    lv_obj_set_style_radius(panel, 12, 0);
-    lv_obj_set_style_border_width(panel, 0, 0);
+    lv_obj_set_style_radius(panel, L.radius, 0);
+    lv_obj_set_style_border_color(panel, COL_LINE, 0);
+    lv_obj_set_style_border_width(panel, 1, 0);
     lv_obj_set_style_pad_left(panel, L.panel_pad_x, 0);
     lv_obj_set_style_pad_right(panel, L.panel_pad_x, 0);
     lv_obj_set_style_pad_top(panel, L.panel_pad_y, 0);
@@ -383,12 +387,12 @@ static lv_obj_t* make_bar(lv_obj_t* parent, int x, int y, int w, int h) {
     lv_obj_set_size(bar, w, h);
     lv_bar_set_range(bar, 0, 100);
     lv_bar_set_value(bar, 0, LV_ANIM_OFF);
-    lv_obj_set_style_bg_color(bar, COL_BAR_BG, LV_PART_MAIN);
+    lv_obj_set_style_bg_color(bar, COL_LINE, LV_PART_MAIN);
     lv_obj_set_style_bg_opa(bar, LV_OPA_COVER, LV_PART_MAIN);
-    lv_obj_set_style_radius(bar, LV_RADIUS_CIRCLE, LV_PART_MAIN);
+    lv_obj_set_style_radius(bar, 4, LV_PART_MAIN);
     lv_obj_set_style_bg_color(bar, COL_ACCENT, LV_PART_INDICATOR);
     lv_obj_set_style_bg_opa(bar, LV_OPA_COVER, LV_PART_INDICATOR);
-    lv_obj_set_style_radius(bar, LV_RADIUS_CIRCLE, LV_PART_INDICATOR);
+    lv_obj_set_style_radius(bar, 4, LV_PART_INDICATOR);
     return bar;
 }
 
@@ -405,10 +409,10 @@ static lv_obj_t* make_pill(lv_obj_t* parent, const char* text) {
     lv_obj_t* lbl = lv_label_create(parent);
     lv_label_set_text(lbl, text);
     lv_obj_set_style_text_font(lbl, L.pill_font, 0);
-    lv_obj_set_style_text_color(lbl, COL_TEXT, 0);
-    lv_obj_set_style_bg_color(lbl, COL_BAR_BG, 0);
+    lv_obj_set_style_text_color(lbl, THEME_ON_BADGE, 0);
+    lv_obj_set_style_bg_color(lbl, THEME_BADGE, 0);
     lv_obj_set_style_bg_opa(lbl, LV_OPA_COVER, 0);
-    lv_obj_set_style_radius(lbl, LV_RADIUS_CIRCLE, 0);
+    lv_obj_set_style_radius(lbl, 4, 0);
     lv_obj_set_style_pad_left(lbl, L.pill_pad_x, 0);
     lv_obj_set_style_pad_right(lbl, L.pill_pad_x, 0);
     lv_obj_set_style_pad_top(lbl, L.pill_pad_y, 0);
@@ -536,7 +540,7 @@ static int32_t text_width(const char* txt, const lv_font_t* font) {
 }
 
 static lv_color_t heat_color(uint8_t level) {
-    return level ? lv_color_mix(COL_ACCENT, COL_BAR_BG, level * 255 / 4) : COL_BAR_BG;
+    return level ? lv_color_mix(COL_ACCENT, COL_LINE, level * 255 / 4) : COL_LINE;
 }
 
 // Text must outlive the draw call: literals or StatsData strings only.
@@ -672,7 +676,7 @@ static void hours_draw_cb(lv_event_t* e) {
         const int32_t x = a.x1 + h * pitch;
         const int32_t top = base - (lvl ? LV_MAX(4, span * lvl / 8) : 2);   // 2px stub for idle hours
         const lv_area_t bar = { x, top, x + bar_w - 1, base - 1 };
-        r.bg_color = lvl ? COL_ACCENT : COL_BAR_BG;
+        r.bg_color = lvl ? COL_ACCENT : COL_LINE;
         lv_draw_rect(layer, &r, &bar);
     }
 
@@ -727,7 +731,7 @@ static void build_sessions_workspace(lv_obj_t* tile) {
         lv_obj_align(sess_state[i], LV_ALIGN_TOP_RIGHT, -L.margin, y);
         sess_rule[i] = lv_obj_create(tile);
         lv_obj_remove_style_all(sess_rule[i]);
-        lv_obj_set_style_bg_color(sess_rule[i], COL_BAR_BG, 0);
+        lv_obj_set_style_bg_color(sess_rule[i], COL_LINE, 0);
         lv_obj_set_style_bg_opa(sess_rule[i], LV_OPA_COVER, 0);
         lv_obj_set_size(sess_rule[i], L.content_w, 1);
         lv_obj_set_pos(sess_rule[i], L.margin, y + (pitch + line_h) / 2);
@@ -1035,7 +1039,7 @@ void ui_update(const UsageData* data) {
     lv_color_t  pace_color = COL_TEXT;
     const char* pace_hex   = "faf9f5";   // recolor hex for each token in theme.h
     if (data->session_pct > (float)data->time_pct + 15.0f) {
-        pace_text = "Over pace";  pace_color = COL_RED;    pace_hex = "c64545";
+        pace_text = "Over pace";  pace_color = COL_ALERT;  pace_hex = "c6613f";
     } else if (data->session_pct > (float)data->time_pct - 15.0f) {
         pace_text = "On pace";    pace_color = COL_ACCENT; pace_hex = "d97757";
     }
@@ -1058,7 +1062,7 @@ void ui_update(const UsageData* data) {
         lv_label_set_text(lbl_weekly_label, "Period");
         lv_label_set_text_fmt(lbl_weekly_pct, "%d%%", data->time_pct);
         lv_bar_set_value(bar_weekly, data->time_pct, LV_ANIM_ON);
-        lv_color_t bar_pace = (data->session_pct <= (float)data->time_pct + 15.0f) ? COL_ACCENT : COL_RED;
+        lv_color_t bar_pace = (data->session_pct <= (float)data->time_pct + 15.0f) ? COL_ACCENT : COL_ALERT;
         lv_obj_set_style_bg_color(bar_weekly, bar_pace, LV_PART_INDICATOR);
         snprintf(buf, sizeof(buf), "#%s %s# - #faf9f5 Resets %s#",
                  pace_hex, pace_text, data->reset_date);

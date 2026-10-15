@@ -316,6 +316,8 @@ sim`, then `cd firmware && .pio/build/sim/program`). See
   `firmware/src/splash_animations.h`. See [`tools/README.md`](tools/README.md).
 - **Icons** — Lucide PNGs convert to LVGL C arrays with
   `tools/png_to_lvgl.js`. See [`tools/README.md`](tools/README.md).
+- **Design system** — colors, type and shapes follow Anthropic's design
+  system: [`docs/design-system.md`](docs/design-system.md).
 - **Fonts** — the pre-compiled LVGL fonts and the LVGL-9 patching they need:
   [`docs/fonts.md`](docs/fonts.md).
 - **Porting** — [`docs/porting/adding-a-board.md`](docs/porting/adding-a-board.md)
