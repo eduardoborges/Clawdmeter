@@ -14,7 +14,6 @@ private let link: DeviceLink = {
     return link
 }()
 
-@main
 struct TallyApp: App {
     var body: some Scene {
         MenuBarExtra("Tally", systemImage: "gauge.with.dots.needle.33percent") {

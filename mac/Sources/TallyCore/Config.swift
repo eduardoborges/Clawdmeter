@@ -19,6 +19,11 @@ public struct Config {
         }
     }
 
+    /// The first value of `key`, lowercased, or "" when it isn't set.
+    public func value(_ key: String) -> String {
+        pairs.first { $0.key == key }?.value.lowercased() ?? ""
+    }
+
     /// The first value of `key` that is one of `allowed`, lowercased.
     public func choice(_ key: String, _ allowed: Set<String>, default fallback: String) -> String {
         pairs.lazy.map { ($0.key, $0.value.lowercased()) }
