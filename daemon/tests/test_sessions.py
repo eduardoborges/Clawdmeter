@@ -143,7 +143,7 @@ def test_message_fits_the_device_buffer(tmp_path):
         write_full(tmp_path, f"s{i}", now - i, p="a-very-long-project", e="alert",
                    ti="t" * 60, br="b" * 60)
     msg = sessions_message(tmp_path, now, tmp_path / "config")
-    assert 0 < len(msg["v"]) < ROWS
+    assert 0 < len(msg["v"]) < ROWS and msg["n"] == ROWS
     assert len(json.dumps(msg, separators=(",", ":"))) <= MAX_BYTES
 
 
@@ -154,4 +154,7 @@ def test_rows_keep_their_place_while_working(tmp_path):
     write_full(tmp_path, "d1", now - 5, p="d1", e="stop", fin=now - 300)
     write_full(tmp_path, "d2", now - 200, p="d2", e="stop", fin=now - 200)
     msg = sessions_message(tmp_path, now, tmp_path / "config")
-    assert [r[0] for r in msg["v"]] == ["new", "old", "d2", "d1"]
+    assert [r[0] for r in msg["v"]] == ["new", "old", "d2", "d1"] and "n" not in msg
+    for i in range(ROWS):
+        write_full(tmp_path, f"s{i}", now, e="stop")
+    assert sessions_message(tmp_path, now, tmp_path / "config")["n"] == ROWS + 4

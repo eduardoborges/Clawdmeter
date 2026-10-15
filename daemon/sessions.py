@@ -87,8 +87,8 @@ def sessions_message(path: Path = SESSIONS_DIR, now: float | None = None,
     Doing and the branch share the row's second line; doing is "" for done, the
     branch "" outside git. A session counts as working while its subagents run,
     and the row says how many. Deletes files older than MAX_AGE. Adds "a" (what
-    the newest working session is doing) and "dn" (when a long task just
-    finished, plus "b" to beep)."""
+    the newest working session is doing), "dn" (when a long task just finished,
+    plus "b" to beep) and "n" (all open sessions, when some are left out)."""
     now = time.time() if now is None else now
     done_after = _setting("done_after", config)
     done_after = int(done_after) if done_after.isdigit() else DONE_AFTER
@@ -144,10 +144,14 @@ def sessions_message(path: Path = SESSIONS_DIR, now: float | None = None,
         if _setting("beep", config) == "on":
             msg["b"] = 1
     # Long titles can overflow the device's buffer. The last rows go first;
-    # they rarely fit on the screen anyway.
-    while msg["v"] and len(json.dumps(msg, separators=(",", ":"))) > MAX_BYTES:
+    # they rarely fit on the screen anyway. "n" counts every open session when
+    # some are left out, for the device's "+N more".
+    while True:
+        if len(rows) > len(msg["v"]):
+            msg["n"] = len(rows)
+        if not msg["v"] or len(json.dumps(msg, separators=(",", ":"))) <= MAX_BYTES:
+            return msg
         msg["v"].pop()
-    return msg
 
 
 if __name__ == "__main__":
