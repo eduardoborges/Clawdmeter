@@ -1,3 +1,4 @@
+import ServiceManagement
 import SwiftUI
 
 // One link and one daemon for the whole process: SwiftUI may build the App
@@ -15,6 +16,8 @@ private let link = DeviceLink()
 }()
 
 struct TallyApp: App {
+    @State private var openAtLogin = SMAppService.mainApp.status == .enabled
+
     init() {
         _ = daemon   // globals start lazily
     }
@@ -26,6 +29,15 @@ struct TallyApp: App {
                 Text("Updated at \(updated.formatted(date: .omitted, time: .shortened))")
             }
             Divider()
+            Toggle("Open at Login", isOn: $openAtLogin)
+                .onChange(of: openAtLogin) { _, on in
+                    do {
+                        try on ? SMAppService.mainApp.register() : SMAppService.mainApp.unregister()
+                    } catch {
+                        log("Open at Login: \(error.localizedDescription)")
+                        openAtLogin = SMAppService.mainApp.status == .enabled
+                    }
+                }
             Button("Quit Tally") { NSApplication.shared.terminate(nil) }
                 .keyboardShortcut("q")
         }
