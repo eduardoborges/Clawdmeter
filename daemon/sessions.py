@@ -2,8 +2,8 @@
 """Open Claude Code sessions for the device's Sessions workspace.
 
 attention-hook.sh leaves one file per session in SESSIONS_DIR holding the
-project name, the last hook event, the last tool and when the current task
-started; the file's mtime says when the last event happened.
+project name, the git branch, the last hook event, the last tool and when the
+current task started; the file's mtime says when the last event happened.
 No third-party imports: the macOS daemon imports it, and the Linux daemon runs
 it as a script that prints the message.
 """
@@ -78,12 +78,13 @@ def _doing(state: str, tool: str, agents: int = 0) -> str:
 
 def sessions_message(path: Path = SESSIONS_DIR, now: float | None = None,
                      config: Path = CONFIG_FILE) -> dict:
-    """{"k":"ss","v":[[project, state, minutes, doing], ...]}, sessions that
-    need you first, then working, then done, newest first within each. Minutes
-    count from the start of the task for a working session and from the last
-    event otherwise; doing is the row's second line, "" for done. A session
-    counts as working while its subagents run, and the row says how many. Deletes
-    files older than MAX_AGE. Adds "a" (what the newest working session is
+    """{"k":"ss","v":[[project, state, minutes, doing, branch], ...]},
+    sessions that need you first, then working, then done, newest first within
+    each. Minutes count from the start of the task for a working session and
+    from the last event otherwise. Doing and the branch share the row's second
+    line; doing is "" for done, the branch "" outside git. A session counts as
+    working while its subagents run, and the row says how many. Deletes files
+    older than MAX_AGE. Adds "a" (what the newest working session is
     doing) and "dn" (when a long task just finished, plus "b" to beep)."""
     now = time.time() if now is None else now
     done_after = _setting("done_after", config)
@@ -112,8 +113,10 @@ def sessions_message(path: Path = SESSIONS_DIR, now: float | None = None,
             state = "w"   # its reply ended, but background agents still run
         start, fin = d.get("st"), d.get("fin")
         since = start if state == "w" and isinstance(start, (int, float)) else mtime
+        # 24 keeps six rows under the firmware's 512-byte buffer.
         rows.append((state, mtime, _ascii(str(d.get("p") or "?"), 12), since,
-                     _doing(state, str(d.get("t") or ""), len(agents))))
+                     _doing(state, str(d.get("t") or ""), len(agents)),
+                     _ascii(str(d.get("br") or ""), 24)))
         last = max([mtime, *agents])
         if state == "w" and now - last < ACTIVE_MAX and (not active or last > active[0]):
             active = (last, str(d.get("t") or ""))
@@ -122,8 +125,8 @@ def sessions_message(path: Path = SESSIONS_DIR, now: float | None = None,
                 and fin - start >= done_after * 60 and (not done or fin > done)):
             done = fin
     rows.sort(key=lambda r: ("awd".index(r[0]), -r[1]))
-    msg = {"k": "ss", "v": [[p, s, int(max(0, now - since) // 60), doing]
-                            for s, _, p, since, doing in rows[:ROWS]]}
+    msg = {"k": "ss", "v": [[p, s, int(max(0, now - since) // 60), doing, br]
+                            for s, _, p, since, doing, br in rows[:ROWS]]}
     if active:
         msg["a"] = _activity(active[1])
     if done:

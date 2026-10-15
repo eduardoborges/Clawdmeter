@@ -22,10 +22,10 @@ def test_states_order_and_age(tmp_path):
     (tmp_path / ".d.123").write_text("{}")                       # hook's temp file
     write(tmp_path, "e", "x", "bogus", now)                      # unknown event
     assert sessions_message(tmp_path, now)["v"] == [
-        ["projeto acao", "a", 0, "Needs your input"],
-        ["Clawdmeter", "w", 2, "Thinking"],
-        ["done-new", "d", 1, ""],
-        ["done-old", "d", 60, ""],
+        ["projeto acao", "a", 0, "Needs your input", ""],
+        ["Clawdmeter", "w", 2, "Thinking", ""],
+        ["done-new", "d", 1, "", ""],
+        ["done-old", "d", 60, "", ""],
     ]
 
 
@@ -36,8 +36,8 @@ def test_working_row_says_what_and_since_when(tmp_path):
     write_full(tmp_path, "c", now - 120, e="clear", t="Skill")
     write_full(tmp_path, "d", now - 180, e="stop", t="Bash", st=now - 999)
     rows = sessions_message(tmp_path, now, tmp_path / "config")["v"]
-    assert [r[2:] for r in rows] == [[15, "Editing"], [1, "Using MCP"],
-                                     [2, "Working"], [3, ""]]
+    assert [r[2:4] for r in rows] == [[15, "Editing"], [1, "Using MCP"],
+                                      [2, "Working"], [3, ""]]
 
 
 def test_prunes_stale_caps_rows_and_names(tmp_path):
@@ -107,7 +107,7 @@ def test_subagents_keep_the_row_working(tmp_path):
     write_full(tmp_path, "b", now - 5, e="clear", t="Read", ag={"z": now - 1})
     write_full(tmp_path, "c", now - 5, e="alert", ag={"z": now - 1})
     msg = sessions_message(tmp_path, now, tmp_path / "config")
-    assert [r[1:] for r in msg["v"]] == [["a", 0, "Needs your input"],
+    assert [r[1:4] for r in msg["v"]] == [["a", 0, "Needs your input"],
                                          ["w", 0, "1 agent working"],
                                          ["w", 10, "2 agents working"]]
     assert msg["a"] == "cloud"   # a parent waiting on agents is still active
@@ -117,5 +117,13 @@ def test_stale_subagents_are_ignored(tmp_path):
     now = 1_000_000.0
     write_full(tmp_path, "a", now - 300, e="stop", ag={"x": now - ACTIVE_MAX - 1})
     write_full(tmp_path, "b", now - 5, e="clear", t="Read", ag={})
-    assert [r[1:] for r in sessions_message(tmp_path, now, tmp_path / "config")["v"]] == [
+    assert [r[1:4] for r in sessions_message(tmp_path, now, tmp_path / "config")["v"]] == [
         ["w", 0, "Reading"], ["d", 5, ""]]
+
+
+def test_branch_rides_along(tmp_path):
+    now = 1_000_000.0
+    write_full(tmp_path, "a", now - 5, e="clear", br="main")
+    write_full(tmp_path, "b", now - 60, e="stop", br="feat/a-branch-name-that-goes-on")
+    assert [r[4] for r in sessions_message(tmp_path, now, tmp_path / "config")["v"]] == [
+        "main", "feat/a-branch-name-that-"]
