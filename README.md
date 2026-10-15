@@ -14,13 +14,13 @@ Shift+Tab over BLE HID for Claude Code's voice mode and mode-toggle shortcuts.
 
 ## Screens
 
-The device boots into the splash. Tap the screen anywhere to switch to the Usage view; tap again to flip back to the splash.
+The device boots into the splash. Tap the screen anywhere to switch to the workspaces, which open on Sessions; tap again to flip back to the splash.
 
-On the Usage view, swipe left for Today: your Claude Code messages per hour since midnight as 24 bars, with prompts, tool calls, tokens, sessions, the busiest project and active hours below. The daemon reads them from the session transcripts in `~/.claude/projects`, counts the main conversation only, and refreshes at most once a minute. The Windows daemon doesn't send them yet.
+Sessions has one row per open Claude Code session: its project folder and title, the git branch, whether it needs you, is working or is done, and for how long. Sessions that need you are listed first. When the rows don't all fit, each takes one line and the last says how many more are open. The list comes from the hooks in [Attention alerts](#attention-alerts-optional) plus two more, `Stop` and `SessionEnd`. The Windows daemon doesn't send this list yet.
 
-Swipe again for Stats: a heatmap of your Claude Code messages per day over the last 26 weeks, plus six numbers (sessions, total tokens, active days, longest and current streak, favorite model). The daemon reads them from `~/.claude/stats-cache.json`, the cache behind Claude Code's `/stats`, so they are as fresh as Claude Code last left that file.
+Swipe left for Usage, and again for Today: your Claude Code messages per hour since midnight as 24 bars, with prompts, tool calls, tokens, sessions, the busiest project and active hours below. The daemon reads them from the session transcripts in `~/.claude/projects`, counts the main conversation only, and refreshes at most once a minute. The Windows daemon doesn't send them yet.
 
-Swipe left once more for Sessions, one row per open Claude Code session: its project folder, whether it needs you, is working or is done, and for how long. Sessions that need you are listed first. The list comes from the hooks in [Attention alerts](#attention-alerts-optional) plus two more, `Stop` and `SessionEnd`. The Windows daemon doesn't send this list yet.
+Swipe once more for Stats: a heatmap of your Claude Code messages per day over the last 26 weeks, plus six numbers (sessions, total tokens, active days, longest and current streak, favorite model). The daemon reads them from `~/.claude/stats-cache.json`, the cache behind Claude Code's `/stats`, so they are as fresh as Claude Code last left that file.
 
 |              Splash               |              Usage              |
 | :-------------------------------: | :-----------------------------: |

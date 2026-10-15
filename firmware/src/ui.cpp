@@ -806,8 +806,8 @@ static void build_sessions_workspace(lv_obj_t* tile) {
 // mascot stay put. The page doesn't follow the finger, because each frame of
 // motion redraws the whole screen over QSPI; see WS_SLIDE_MS. Taps bubble up to
 // usage_container, where a tap toggles the splash.
-enum { WS_USAGE, WS_TODAY, WS_STATS, WS_SESSIONS, WS_COUNT };
-static const char* const ws_title[WS_COUNT] = {"Usage", "Today", "Stats", "Sessions"};
+enum { WS_SESSIONS, WS_USAGE, WS_TODAY, WS_STATS, WS_COUNT };
+static const char* const ws_title[WS_COUNT] = {"Sessions", "Usage", "Today", "Stats"};
 static lv_obj_t* ws[WS_COUNT];
 static uint8_t   ws_cur;
 
@@ -893,7 +893,7 @@ static void init_usage_screen(lv_obj_t* scr) {
     build_sessions_workspace(ws[WS_SESSIONS]);
 
     lbl_title = lv_label_create(usage_container);
-    lv_label_set_text(lbl_title, "Usage");
+    lv_label_set_text(lbl_title, ws_title[ws_cur]);
     lv_obj_set_style_text_font(lbl_title, L.title_font, 0);
     lv_obj_set_style_text_color(lbl_title, COL_TEXT, 0);
     // The nudge balances the corner logo on the left; smaller on small
@@ -1062,10 +1062,10 @@ void ui_update(const UsageData* data) {
         clock_base_epoch = data->clock_epoch;
         clock_base_ms = last_data_ms;
         clock_fmt = data->clock_fmt;
-    } else if (clock_base_epoch != 0) {   // clock turned off daemon-side → revert title to "Usage"
+    } else if (clock_base_epoch != 0) {   // clock turned off daemon-side → back to the workspace title
         clock_base_epoch = 0;
         clock_last_min = -1;
-        lv_label_set_text(lbl_title, "Usage");
+        lv_label_set_text(lbl_title, ws_title[ws_cur]);
     }
 
     int s_pct = (int)(data->session_pct + 0.5f);
@@ -1197,8 +1197,9 @@ void ui_tick_anim(void) {
     uint32_t now = lv_tick_get();
     sess_tick(now);
 
-    // Title clock: once the daemon has sent wall-clock time, replace "Usage" with
-    // the live time, advanced locally so it ticks every minute between payloads.
+    // Title clock: once the daemon has sent wall-clock time, replace the
+    // workspace title with the live time, advanced locally so it ticks every
+    // minute between payloads.
     if (clock_base_epoch > 0) {
         time_t cur = (time_t)(clock_base_epoch + (now - clock_base_ms) / 1000);
         struct tm tmv;
