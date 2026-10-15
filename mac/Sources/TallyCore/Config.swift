@@ -29,6 +29,27 @@ public struct Config {
         pairs.first { $0.key == key }?.value.lowercased() ?? ""
     }
 
+    /// Writes `key = value` into the file: the first line that sets `key` gets
+    /// the new value and later ones go, so every reader agrees. Comments and
+    /// other lines stay as they are.
+    public static func set(_ key: String, _ value: String, in file: URL = Config.file) throws {
+        let text = (try? String(contentsOf: file, encoding: .utf8)) ?? ""
+        var lines = text.isEmpty ? [] : text.components(separatedBy: "\n")
+        if lines.last == "" { lines.removeLast() }
+        var placed = false
+        lines = lines.compactMap { line in
+            let code = line.split(separator: "#", maxSplits: 1, omittingEmptySubsequences: false)[0]
+            guard let eq = code.firstIndex(of: "="),
+                  code[..<eq].trimmingCharacters(in: .whitespaces).lowercased() == key else { return line }
+            if placed { return nil }
+            placed = true
+            return "\(key) = \(value)"
+        }
+        if !placed { lines.append("\(key) = \(value)") }
+        try FileManager.default.createDirectory(at: file.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try (lines.joined(separator: "\n") + "\n").write(to: file, atomically: true, encoding: .utf8)
+    }
+
     /// The first value of `key` that is one of `allowed`, lowercased.
     public func choice(_ key: String, _ allowed: Set<String>, default fallback: String) -> String {
         pairs.lazy.map { ($0.key, $0.value.lowercased()) }
