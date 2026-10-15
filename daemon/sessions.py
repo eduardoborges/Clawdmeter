@@ -117,9 +117,11 @@ def sessions_message(path: Path = SESSIONS_DIR, now: float | None = None,
         start, fin = d.get("st"), d.get("fin")
         since = start if state == "w" and isinstance(start, (int, float)) else mtime
         name = _ascii(str(d.get("p") or "?"), 12)
-        title = _ascii(str(d.get("ti") or ""), 40)
+        title = _ascii(str(d.get("ti") or ""), 32)
         if title:
-            name = f"{name} | {title}"[:40]
+            name = f"{name} | {title}"
+            if len(name) > 32:   # about what a row shows
+                name = name[:29] + "..."
         # Rows keep their place while sessions work: a working row moves only
         # when a new prompt starts its task, a done row when it finishes.
         order = (since if state == "w" else fin if state == "d"
