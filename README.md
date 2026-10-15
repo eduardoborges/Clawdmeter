@@ -1,9 +1,9 @@
 <div align="center">
   <img src="assets/readme/waving.gif" width="96" alt="">
-  <h1>Clawdmeter</h1>
+  <h1>Tally</h1>
   <p>A desk display for <strong>Claude Code</strong>. Usage limits, every open session and what it's doing, today's activity and six months of history, on a small AMOLED next to the keyboard.</p>
 
-  [![last commit](https://img.shields.io/github/last-commit/eduardoborges/Clawdmeter)](https://github.com/eduardoborges/Clawdmeter/commits/main)
+  [![last commit](https://img.shields.io/github/last-commit/eduardoborges/tally)](https://github.com/eduardoborges/tally/commits/main)
   [![board](https://img.shields.io/badge/board-ESP32--S3%20AMOLED%202.16-D97757)](#hardware)
 </div>
 
@@ -11,7 +11,7 @@
 
 **[Screens](#screens)** · **[Install](#install)** · **[Hooks](#claude-code-hooks)** · **[Settings](#settings)** · **[Protocol](#ble-protocol)**
 
-> This started as a fork of [HermannBjorgvin/Clawdmeter](https://github.com/HermannBjorgvin/Clawdmeter) and split off before its v2. Upstream rewrote the host side as a Rust app. This one keeps the small daemons and puts the work into what the device shows. The two projects no longer share code or releases.
+> This started as a fork of [HermannBjorgvin/Clawdmeter](https://github.com/HermannBjorgvin/Clawdmeter), went by the same name, and split off before its v2. Upstream rewrote the host side as a Rust app. This one keeps the small daemons and puts the work into what the device shows. The two projects no longer share code or releases.
 
 | Sessions | Usage | Today | Stats |
 | :-: | :-: | :-: | :-: |
@@ -81,7 +81,7 @@ You need the [PlatformIO CLI](https://docs.platformio.org/en/latest/core/install
 ./install-mac.sh
 ```
 
-Then open System Settings → Bluetooth and click Connect next to "Clawdmeter". The daemon only talks to the device this Mac is connected to, and picks it up within a minute.
+Then open System Settings → Bluetooth and click Connect next to "Tally". The daemon only talks to the device this Mac is connected to, and picks it up within a minute.
 
 `install-mac.sh` creates a venv with `bleak` and `httpx`, asks about the clock, the chime and the alert beep, and loads a LaunchAgent. macOS asks for Bluetooth permission on the first run. The token comes from the Keychain entry Claude Code already keeps.
 
@@ -95,7 +95,7 @@ launchctl load -w ~/Library/LaunchAgents/com.user.claude-usage-daemon.plist  # s
 
 ```sh
 ./flash.sh waveshare_amoled_216      # defaults to /dev/ttyACM0
-bluetoothctl scan le                 # wait for "Clawdmeter"
+bluetoothctl scan le                 # wait for "Tally"
 bluetoothctl pair <MAC> && bluetoothctl trust <MAC>
 ./install.sh
 systemctl --user start claude-usage-daemon
@@ -120,29 +120,29 @@ Sessions, alerts, the corner Clawd and the celebrations all come from Claude Cod
   "hooks": {
     "Notification": [
       { "matcher": "permission_prompt|elicitation_dialog",
-        "hooks": [{ "type": "command", "command": "/path/to/Clawdmeter/daemon/attention-hook.sh alert" }] }
+        "hooks": [{ "type": "command", "command": "/path/to/tally/daemon/attention-hook.sh alert" }] }
     ],
     "PreToolUse": [
       { "matcher": "AskUserQuestion",
-        "hooks": [{ "type": "command", "command": "/path/to/Clawdmeter/daemon/attention-hook.sh alert" }] },
+        "hooks": [{ "type": "command", "command": "/path/to/tally/daemon/attention-hook.sh alert" }] },
       { "matcher": "*",
-        "hooks": [{ "type": "command", "command": "/path/to/Clawdmeter/daemon/attention-hook.sh tool" }] }
+        "hooks": [{ "type": "command", "command": "/path/to/tally/daemon/attention-hook.sh tool" }] }
     ],
     "UserPromptSubmit": [
-      { "hooks": [{ "type": "command", "command": "/path/to/Clawdmeter/daemon/attention-hook.sh clear" }] }
+      { "hooks": [{ "type": "command", "command": "/path/to/tally/daemon/attention-hook.sh clear" }] }
     ],
     "PostToolUse": [
       { "matcher": "*",
-        "hooks": [{ "type": "command", "command": "/path/to/Clawdmeter/daemon/attention-hook.sh clear" }] }
+        "hooks": [{ "type": "command", "command": "/path/to/tally/daemon/attention-hook.sh clear" }] }
     ],
     "Stop": [
-      { "hooks": [{ "type": "command", "command": "/path/to/Clawdmeter/daemon/attention-hook.sh stop" }] }
+      { "hooks": [{ "type": "command", "command": "/path/to/tally/daemon/attention-hook.sh stop" }] }
     ],
     "SubagentStop": [
-      { "hooks": [{ "type": "command", "command": "/path/to/Clawdmeter/daemon/attention-hook.sh subagent" }] }
+      { "hooks": [{ "type": "command", "command": "/path/to/tally/daemon/attention-hook.sh subagent" }] }
     ],
     "SessionEnd": [
-      { "hooks": [{ "type": "command", "command": "/path/to/Clawdmeter/daemon/attention-hook.sh end" }] }
+      { "hooks": [{ "type": "command", "command": "/path/to/tally/daemon/attention-hook.sh end" }] }
     ]
   }
 }
