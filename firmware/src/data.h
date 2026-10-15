@@ -57,6 +57,7 @@ struct SessionsData {
         char branch[25];     // second line too, "" outside git
     } row[SESSION_ROWS];
     uint8_t rows;
+    uint8_t total;           // every open session, more than rows when some were left out
     char activity[12];       // animation the corner Clawd plays while a session works, "" = none
     uint32_t done_id;        // when a long task just finished (daemon clock), 0 = none
     bool beep;               // chime along with that celebration

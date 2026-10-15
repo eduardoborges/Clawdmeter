@@ -718,6 +718,7 @@ struct SessRow { lv_obj_t *mark, *name, *time, *branch, *doing, *rule; };
 static SessRow   sess[SESSION_ROWS];
 static char      sess_state[SESSION_ROWS];   // what each row shows, for sess_tick
 static lv_obj_t* sess_empty;
+static lv_obj_t* sess_more;                  // "+3 more" when rows run out
 static int32_t   sess_mark_w;                // mark column, gap included
 
 static lv_obj_t* sess_label(lv_obj_t* tile, const lv_font_t* font) {
@@ -789,6 +790,9 @@ static void build_sessions_workspace(lv_obj_t* tile) {
         lv_obj_set_size(r.rule, L.content_w, 1);
         lv_obj_add_flag(r.rule, LV_OBJ_FLAG_HIDDEN);
     }
+
+    sess_more = sess_label(tile, L.stat_label_font);
+    lv_obj_set_style_text_color(sess_more, COL_DIM, 0);
 
     sess_empty = lv_label_create(tile);
     lv_label_set_text(sess_empty, "No sessions");
@@ -1371,20 +1375,33 @@ void ui_update_sessions(const SessionsData* sessions) {
     const int32_t sub_h  = lv_font_get_line_height(L.stat_label_font);
     const int32_t mark_h = lv_font_get_line_height(L.anim_font);
     const int32_t gap    = name_h / 2;
-    // Rows fill the space down to the status line; whatever doesn't fit is left
-    // out, and the daemon sends the ones that need you first.
+    // Rows fill the space down to the status line. The daemon sends the ones
+    // that need you first.
     const int32_t bottom = L.scr_h + L.anim_y - mark_h - gap;
     const int32_t text_x = L.margin + sess_mark_w;
-    int32_t y = L.content_y + sess_use_h;
+    const int32_t top    = L.content_y + sess_use_h;
+    // Rows get their second line while every session fits that way, and one
+    // line each otherwise (always on small screens). When even that runs out,
+    // the last slot says how many are left.
+    const int total = LV_MAX(sessions->total, sessions->rows);
+    int32_t need = top - gap;
+    for (int i = 0; i < sessions->rows; i++) {
+        const auto& r = sessions->row[i];
+        need += name_h + gap + (r.doing[0] || r.branch[0] ? sub_h : 0);
+    }
+    const bool compact = L.scr_h < 300 || total > sessions->rows || need > bottom;
+    const int fit = LV_MAX((bottom - top + gap) / (name_h + gap), 1);
+    int rows = compact ? LV_MIN(sessions->rows, fit) : sessions->rows;
+    if (rows < total) rows = LV_MIN(rows, fit - 1);
+    int32_t y = top;
     int last = -1;
     char buf[12];
     for (int i = 0; i < SESSION_ROWS; i++) {
         SessRow& w = sess[i];
         const auto& r = sessions->row[i];
-        // Small screens get one line per row.
-        const bool two = i < sessions->rows && (r.doing[0] || r.branch[0]) && L.scr_h >= 300;
+        const bool shown = i < rows;
+        const bool two = shown && !compact && (r.doing[0] || r.branch[0]);
         const int32_t h = name_h + (two ? sub_h : 0);
-        const bool shown = i < sessions->rows && y + h <= bottom;
         sess_state[i] = shown ? r.state : 0;
         lv_obj_set_flag(w.mark, LV_OBJ_FLAG_HIDDEN, !shown);
         lv_obj_set_flag(w.name, LV_OBJ_FLAG_HIDDEN, !shown);
@@ -1428,6 +1445,12 @@ void ui_update_sessions(const SessionsData* sessions) {
         }
         lv_obj_set_pos(w.rule, L.margin, y + h + gap / 2);
         y += h + gap;
+    }
+    lv_obj_set_flag(sess_more, LV_OBJ_FLAG_HIDDEN, rows >= total);
+    if (rows < total) {
+        if (last >= 0) lv_obj_clear_flag(sess[last].rule, LV_OBJ_FLAG_HIDDEN);
+        lv_label_set_text_fmt(sess_more, "+%d more", total - rows);
+        lv_obj_set_pos(sess_more, text_x, y + (name_h - sub_h) / 2);
     }
 }
 

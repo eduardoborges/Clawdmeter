@@ -143,6 +143,7 @@ static void parse_sessions(JsonDocument& doc) {
         strlcpy(r.doing, v[3] | "", sizeof(r.doing));
         strlcpy(r.branch, v[4] | "", sizeof(r.branch));
     }
+    sessions.total = doc["n"] | sessions.rows;
     strlcpy(sessions.activity, doc["a"] | "", sizeof(sessions.activity));
     sessions.done_id = doc["dn"] | 0UL;
     sessions.beep = doc["b"].as<bool>();
