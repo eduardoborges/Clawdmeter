@@ -27,6 +27,13 @@ LOOKING = {"Read", "Grep", "Glob", "LS", "WebSearch", "WebFetch"}
 # finishes, announced for DONE_FRESH seconds.
 DONE_AFTER = 5
 DONE_FRESH = 60
+# What a working row says it is doing, from its last tool. Coarse on purpose:
+# the daemon resends only when the message changes.
+DOING = {"Bash": "Running", "Edit": "Editing", "Write": "Editing",
+         "MultiEdit": "Editing", "NotebookEdit": "Editing", "Read": "Reading",
+         "Grep": "Searching", "Glob": "Searching", "LS": "Searching",
+         "WebSearch": "Browsing", "WebFetch": "Browsing", "Task": "Delegating",
+         "Agent": "Delegating", "TodoWrite": "Planning"}
 
 
 def _ascii(text: str, limit: int) -> str:
@@ -55,10 +62,23 @@ def _activity(tool: str) -> str:
     return "cloud"
 
 
+def _doing(state: str, tool: str) -> str:
+    """The row's second line: what a working session does, or that it waits for you."""
+    if state == "a":
+        return "Needs your input"
+    if state != "w":
+        return ""
+    if not tool:
+        return "Thinking"
+    return DOING.get(tool, "Using MCP" if tool.startswith("mcp__") else "Working")
+
+
 def sessions_message(path: Path = SESSIONS_DIR, now: float | None = None,
                      config: Path = CONFIG_FILE) -> dict:
-    """{"k":"ss","v":[[project, state, minutes since], ...]}, sessions that need
-    you first, then working, then done, newest first within each. Deletes
+    """{"k":"ss","v":[[project, state, minutes, doing], ...]}, sessions that
+    need you first, then working, then done, newest first within each. Minutes
+    count from the start of the task for a working session and from the last
+    event otherwise; doing is the row's second line, "" for done. Deletes
     files older than MAX_AGE. Adds "a" (what the newest working session is
     doing) and "dn" (when a long task just finished, plus "b" to beep)."""
     now = time.time() if now is None else now
@@ -79,16 +99,19 @@ def sessions_message(path: Path = SESSIONS_DIR, now: float | None = None,
         state = STATE.get(d.get("e")) if isinstance(d, dict) else None
         if not state:
             continue
-        rows.append((state, mtime, _ascii(str(d.get("p") or "?"), 12)))
+        start, fin = d.get("st"), d.get("fin")
+        since = start if state == "w" and isinstance(start, (int, float)) else mtime
+        rows.append((state, mtime, _ascii(str(d.get("p") or "?"), 12), since,
+                     _doing(state, str(d.get("t") or ""))))
         if state == "w" and now - mtime < ACTIVE_MAX and (not active or mtime > active[0]):
             active = (mtime, str(d.get("t") or ""))
-        start, fin = d.get("st"), d.get("fin")
         if (state == "d" and done_after and isinstance(start, (int, float))
                 and isinstance(fin, (int, float)) and now - fin < DONE_FRESH
                 and fin - start >= done_after * 60 and (not done or fin > done)):
             done = fin
     rows.sort(key=lambda r: ("awd".index(r[0]), -r[1]))
-    msg = {"k": "ss", "v": [[p, s, int(max(0, now - t) // 60)] for s, t, p in rows[:ROWS]]}
+    msg = {"k": "ss", "v": [[p, s, int(max(0, now - since) // 60), doing]
+                            for s, _, p, since, doing in rows[:ROWS]]}
     if active:
         msg["a"] = _activity(active[1])
     if done:

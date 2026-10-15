@@ -22,11 +22,22 @@ def test_states_order_and_age(tmp_path):
     (tmp_path / ".d.123").write_text("{}")                       # hook's temp file
     write(tmp_path, "e", "x", "bogus", now)                      # unknown event
     assert sessions_message(tmp_path, now)["v"] == [
-        ["projeto acao", "a", 0],
-        ["Clawdmeter", "w", 2],
-        ["done-new", "d", 1],
-        ["done-old", "d", 60],
+        ["projeto acao", "a", 0, "Needs your input"],
+        ["Clawdmeter", "w", 2, "Thinking"],
+        ["done-new", "d", 1, ""],
+        ["done-old", "d", 60, ""],
     ]
+
+
+def test_working_row_says_what_and_since_when(tmp_path):
+    now = 1_000_000.0
+    write_full(tmp_path, "a", now - 5, e="clear", t="Edit", st=now - 900)
+    write_full(tmp_path, "b", now - 60, e="clear", t="mcp__figma__get_node")
+    write_full(tmp_path, "c", now - 120, e="clear", t="Skill")
+    write_full(tmp_path, "d", now - 180, e="stop", t="Bash", st=now - 999)
+    rows = sessions_message(tmp_path, now, tmp_path / "config")["v"]
+    assert [r[2:] for r in rows] == [[15, "Editing"], [1, "Using MCP"],
+                                     [2, "Working"], [3, ""]]
 
 
 def test_prunes_stale_caps_rows_and_names(tmp_path):
