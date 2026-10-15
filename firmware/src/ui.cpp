@@ -72,6 +72,7 @@ struct Layout {
     // Stats workspace
     const lv_font_t* stat_label_font;   // heatmap axis, legend and stat names
     const lv_font_t* stat_value_font;   // stat numbers
+    const lv_font_t* use_font;          // Sessions usage strip
     uint8_t stat_rows;                  // rows of the two-column stat grid
 };
 static Layout L = {};
@@ -113,6 +114,7 @@ static void compute_layout(const BoardCaps& c) {
     L.idle_px = 160;
     L.stat_label_font = &font_sans_16;
     L.stat_value_font = &font_sans_24;
+    L.use_font = &font_sans_20;
     L.stat_rows = 3;
 
     if (c.height >= 460) {
@@ -145,6 +147,7 @@ static void compute_layout(const BoardCaps& c) {
         L.bt_credit_2_font = &font_sans_14;
         L.stat_label_font = &font_sans_14;
         L.stat_value_font = &font_sans_20;
+        L.use_font = &font_sans_16;
         L.pct_font  = &font_sans_48;
         L.pill_font = &font_sans_semibold_16;
     } else {
@@ -192,6 +195,7 @@ static void compute_layout(const BoardCaps& c) {
         L.bt_credit_2_font = &font_sans_12;
         L.stat_label_font = &font_sans_12;
         L.stat_value_font = &font_sans_14;
+        L.use_font = &font_sans_14;
         L.stat_rows = 2;
     }
 
@@ -723,8 +727,50 @@ static lv_obj_t* sess_label(lv_obj_t* tile, const lv_font_t* font) {
     return l;
 }
 
+// Session and weekly usage as one line of thin bars above the rows. Hidden
+// until the first usage data arrives.
+struct MiniBar { lv_obj_t *name, *bar, *pct; };
+static MiniBar sess_use[2];
+static int32_t sess_use_h;                   // the strip and its gap to the rows
+
+static void set_mini_bar(int i, const char* name, int pct, lv_color_t color) {
+    const MiniBar& m = sess_use[i];
+    const int32_t gap  = L.margin / 2;
+    const int32_t half = (L.content_w - L.margin) / 2;
+    const int32_t x    = L.margin + i * (half + L.margin);
+    const int32_t name_w = text_width(name, L.use_font);
+    const int32_t pct_w  = text_width("100%", L.use_font);
+    char buf[8];
+    snprintf(buf, sizeof(buf), "%d%%", pct);
+    lv_label_set_text(m.name, name);
+    lv_label_set_text(m.pct, buf);
+    lv_obj_set_pos(m.name, x, L.content_y);
+    lv_obj_set_pos(m.pct, x + half - text_width(buf, L.use_font), L.content_y);
+    const int32_t bar_h = lv_obj_get_height(m.bar);
+    lv_obj_set_pos(m.bar, x + name_w + gap,
+                   L.content_y + (lv_font_get_line_height(L.use_font) - bar_h) / 2);
+    lv_obj_set_width(m.bar, half - name_w - pct_w - 2 * gap);
+    lv_bar_set_value(m.bar, pct, LV_ANIM_ON);
+    lv_obj_set_style_bg_color(m.bar, color, LV_PART_INDICATOR);
+    lv_obj_clear_flag(m.name, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_clear_flag(m.bar, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_clear_flag(m.pct, LV_OBJ_FLAG_HIDDEN);
+}
+
 static void build_sessions_workspace(lv_obj_t* tile) {
     sess_mark_w = text_width(spinner_frames[1], L.anim_font) + L.margin / 2;
+    for (MiniBar& m : sess_use) {
+        m.name = sess_label(tile, L.use_font);
+        lv_obj_set_style_text_color(m.name, COL_DIM, 0);
+        m.pct = sess_label(tile, L.use_font);
+        lv_obj_set_style_text_color(m.pct, COL_TEXT, 0);
+        m.bar = make_bar(tile, 0, 0, 0, LV_MAX(L.bar_h * 3 / 10, 4));
+        lv_obj_set_style_radius(m.bar, LV_RADIUS_CIRCLE, LV_PART_MAIN);
+        lv_obj_set_style_radius(m.bar, LV_RADIUS_CIRCLE, LV_PART_INDICATOR);
+        lv_obj_add_flag(m.bar, LV_OBJ_FLAG_HIDDEN);
+    }
+    sess_use_h = lv_font_get_line_height(L.use_font)
+               + lv_font_get_line_height(L.stat_value_font) / 2;
     for (int i = 0; i < SESSION_ROWS; i++) {
         SessRow& r = sess[i];
         r.mark  = sess_label(tile, L.anim_font);
@@ -1057,6 +1103,7 @@ void ui_update(const UsageData* data) {
 
     lv_bar_set_value(bar_session, s_pct, LV_ANIM_ON);
     lv_obj_set_style_bg_color(bar_session, pct_color(data->session_pct), LV_PART_INDICATOR);
+    set_mini_bar(0, data->enterprise ? "Spend" : "5h", s_pct, pct_color(data->session_pct));
 
     if (data->enterprise) {
         // Period box: time % + dynamic pace color + "Resets <date>" label
@@ -1065,6 +1112,7 @@ void ui_update(const UsageData* data) {
         lv_bar_set_value(bar_weekly, data->time_pct, LV_ANIM_ON);
         lv_color_t bar_pace = (data->session_pct <= (float)data->time_pct + 15.0f) ? COL_ACCENT : COL_ALERT;
         lv_obj_set_style_bg_color(bar_weekly, bar_pace, LV_PART_INDICATOR);
+        set_mini_bar(1, "Period", data->time_pct, bar_pace);
         snprintf(buf, sizeof(buf), "#%s %s# - #faf9f5 Resets %s#",
                  pace_hex, pace_text, data->reset_date);
         lv_label_set_text(lbl_weekly_reset, buf);
@@ -1073,6 +1121,7 @@ void ui_update(const UsageData* data) {
         lv_label_set_text_fmt(lbl_weekly_pct, "%d%%", w_pct);
         lv_bar_set_value(bar_weekly, w_pct, LV_ANIM_ON);
         lv_obj_set_style_bg_color(bar_weekly, pct_color(data->weekly_pct), LV_PART_INDICATOR);
+        set_mini_bar(1, "7d", w_pct, pct_color(data->weekly_pct));
         format_reset_time(data->weekly_reset_mins, w_pct >= 100, buf, sizeof(buf));
         lv_label_set_text(lbl_weekly_reset, buf);
     }
@@ -1323,7 +1372,7 @@ void ui_update_sessions(const SessionsData* sessions) {
     // out, and the daemon sends the ones that need you first.
     const int32_t bottom = L.scr_h + L.anim_y - mark_h - gap;
     const int32_t text_x = L.margin + sess_mark_w;
-    int32_t y = L.content_y;
+    int32_t y = L.content_y + sess_use_h;
     int last = -1;
     char buf[12];
     for (int i = 0; i < SESSION_ROWS; i++) {
