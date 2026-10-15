@@ -1234,6 +1234,11 @@ void ui_toggle_splash(void) {
     else                                  ui_show_screen(SCREEN_SPLASH);
 }
 
+void ui_next_workspace(void) {
+    if (current_screen == SCREEN_SPLASH) ui_show_screen(prev_non_splash_screen);
+    else                                  show_workspace((ws_cur + 1) % WS_COUNT);
+}
+
 screen_t ui_get_current_screen(void) {
     return current_screen;
 }

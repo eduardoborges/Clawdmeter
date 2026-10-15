@@ -387,7 +387,7 @@ void loop() {
     if (!idle_is_asleep()) display_hal_tick();
 
     // ---- Physical buttons ----
-    //   PRIMARY   → HID Space  (Claude Code voice-mode PTT)
+    //   PRIMARY   → tap: next workspace; hold: HID Space (Claude Code voice-mode PTT)
     //   SECONDARY → HID Shift+Tab  (mode toggle; only if the board has one)
     //   PWR       → on splash: cycle animations; on usage: cycle brightness;
     //               hold ~3s + release: pairing mode
@@ -396,18 +396,28 @@ void loop() {
     // press. Activity bookkeeping happens inside idle_consume_wake_press
     // so no separate idle_note_activity() call is needed here.
     {
-        static bool primary_was = false;
-        static bool primary_wake_swallowed = false;
+        // A tap moves to the next workspace. Space goes out only once the press
+        // outlasts a tap, so push-to-talk starts PTT_HOLD_MS late.
+        static const uint32_t PTT_HOLD_MS = 300;
+        static bool     primary_was = false;
+        static bool     primary_wake_swallowed = false;
+        static bool     primary_talking = false;
+        static uint32_t primary_down_ms = 0;
         bool primary_now = input_hal_is_held(INPUT_BTN_PRIMARY);
         if (primary_now != primary_was) {
             if (primary_now) {
                 if (idle_consume_wake_press()) primary_wake_swallowed = true;
-                else                            ble_keyboard_press(0x2C, 0);  // HID Space, no mods
+                else                            primary_down_ms = millis();
             } else {
-                if (primary_wake_swallowed) primary_wake_swallowed = false;
-                else                        ble_keyboard_release();
+                if (primary_wake_swallowed)  primary_wake_swallowed = false;
+                else if (primary_talking)    { ble_keyboard_release(); primary_talking = false; }
+                else                         ui_next_workspace();
             }
             primary_was = primary_now;
+        } else if (primary_now && !primary_wake_swallowed && !primary_talking &&
+                   millis() - primary_down_ms >= PTT_HOLD_MS) {
+            ble_keyboard_press(0x2C, 0);  // HID Space, no mods
+            primary_talking = true;
         }
 
         if (board_caps().button_count >= 2) {

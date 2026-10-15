@@ -9,7 +9,7 @@
 //   left / right         step one scenario state (pauses playback)
 //   1..9                 jump to scenario state N (pauses playback)
 //   d                    toggle BLE connected/disconnected
-//   b (hold)             PRIMARY button  (BOOT — HID Space PTT on hardware)
+//   b                    PRIMARY button  (BOOT: tap = next workspace, hold = HID Space PTT on hardware)
 //   n (hold)             SECONDARY button (HID Shift+Tab on hardware)
 //   p                    PWR button (short press; hold ~3s + release = pair)
 //   c                    toggle charging       - / =   battery down / up 5%

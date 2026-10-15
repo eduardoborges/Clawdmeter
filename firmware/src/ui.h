@@ -16,6 +16,7 @@ void ui_update_today(const TodayData* today);
 void ui_tick_anim(void);
 void ui_show_screen(screen_t screen);
 void ui_toggle_splash(void);
+void ui_next_workspace(void);
 screen_t ui_get_current_screen(void);
 void ui_update_ble_status(ble_state_t state, const char* name, const char* mac);
 void ui_update_battery(int percent, bool charging, bool usb_power);  // percent < 0 = no battery

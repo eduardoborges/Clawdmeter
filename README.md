@@ -259,7 +259,7 @@ The board has three side buttons. Left and right send HID keys; the middle (PWR)
 
 | Button           | GPIO         | Function                                                     |
 | ---------------- | ------------ | ------------------------------------------------------------ |
-| **Left**         | GPIO 0       | Hold to send Space (Claude Code voice-mode push-to-talk)     |
+| **Left**         | GPIO 0       | Tap for the next screen. Hold to send Space (Claude Code voice-mode push-to-talk) |
 | **Middle** (PWR) | AXP2101 PKEY | On splash: cycle animations. Hold 3s + release: pairing mode |
 | **Right**        | GPIO 18      | Press to send Shift+Tab (Claude Code mode toggle)            |
 
