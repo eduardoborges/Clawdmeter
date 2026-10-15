@@ -7,19 +7,20 @@
 #include "icons.h"
 #include "hal/board_caps.h"
 
-// Custom fonts (scaled for 314 PPI, ~1.9x from original 165 PPI)
-LV_FONT_DECLARE(font_tiempos_56);
-LV_FONT_DECLARE(font_tiempos_34);
-LV_FONT_DECLARE(font_tiempos_48);   // digits, % and - only
-LV_FONT_DECLARE(font_styrene_48);
-LV_FONT_DECLARE(font_styrene_28);
-LV_FONT_DECLARE(font_styrene_24);
-LV_FONT_DECLARE(font_styrene_20);
-LV_FONT_DECLARE(font_styrene_16);
-LV_FONT_DECLARE(font_styrene_14);
-LV_FONT_DECLARE(font_styrene_12);
-LV_FONT_DECLARE(font_mono_32);
-LV_FONT_DECLARE(font_mono_18);
+// Anthropic Sans: Display cut from 28px up, Text below. Regenerate with
+// tools/gen_fonts.sh.
+LV_FONT_DECLARE(font_sans_56);
+LV_FONT_DECLARE(font_sans_48);
+LV_FONT_DECLARE(font_sans_34);
+LV_FONT_DECLARE(font_sans_28);   // + spinner glyphs
+LV_FONT_DECLARE(font_sans_24);
+LV_FONT_DECLARE(font_sans_20);
+LV_FONT_DECLARE(font_sans_16);   // + spinner glyphs
+LV_FONT_DECLARE(font_sans_14);
+LV_FONT_DECLARE(font_sans_12);
+LV_FONT_DECLARE(font_sans_semibold_20);   // badges
+LV_FONT_DECLARE(font_sans_semibold_16);
+LV_FONT_DECLARE(font_sans_semibold_14);
 
 // Layout values computed from the active board's geometry. Populated once
 // in ui_init() and treated as const for the rest of the program. Adding a
@@ -91,13 +92,13 @@ static void compute_layout(const BoardCaps& c) {
     L.panel_pad_y = 12;
     L.pill_pad_x = 14;
     L.pill_pad_y = 4;
-    L.title_font   = &font_tiempos_56;
-    L.pct_font     = &font_tiempos_56;   // numbers set in the display serif
-    L.ent_pct_font = &font_tiempos_56;
-    L.pill_font    = &font_styrene_20;
-    L.reset_font   = &font_styrene_28;
-    L.pace_font    = &font_styrene_16;
-    L.anim_font    = &font_mono_32;
+    L.title_font   = &font_sans_56;
+    L.pct_font     = &font_sans_56;
+    L.ent_pct_font = &font_sans_56;
+    L.pill_font    = &font_sans_semibold_20;
+    L.reset_font   = &font_sans_28;
+    L.pace_font    = &font_sans_16;
+    L.anim_font    = &font_sans_28;
     L.anim_y = -15;
     L.small_icons = false;
     L.title_nudge = 16;
@@ -108,8 +109,8 @@ static void compute_layout(const BoardCaps& c) {
     L.pair_y2 = 120;
     L.pair_y3 = 160;
     L.idle_px = 160;
-    L.stat_label_font = &font_styrene_16;
-    L.stat_value_font = &font_styrene_24;
+    L.stat_label_font = &font_sans_16;
+    L.stat_value_font = &font_sans_24;
     L.stat_rows = 3;
 
     if (c.height >= 460) {
@@ -121,11 +122,11 @@ static void compute_layout(const BoardCaps& c) {
         L.usage_reset_y = 94;
         L.bt_info_panel_h = 160;
         L.bt_reset_zone_h = 110;
-        L.bt_title_font    = &font_tiempos_56;
-        L.bt_status_font   = &font_styrene_48;
-        L.bt_device_font   = &font_styrene_28;
-        L.bt_credit_1_font = &font_styrene_24;
-        L.bt_credit_2_font = &font_styrene_20;
+        L.bt_title_font    = &font_sans_56;
+        L.bt_status_font   = &font_sans_48;
+        L.bt_device_font   = &font_sans_28;
+        L.bt_credit_1_font = &font_sans_24;
+        L.bt_credit_2_font = &font_sans_20;
     } else if (c.height >= 300) {
         // Compact layout — tuned for 368x448 (AMOLED-1.8).
         L.content_y = 85;
@@ -135,15 +136,15 @@ static void compute_layout(const BoardCaps& c) {
         L.usage_reset_y = 78;
         L.bt_info_panel_h = 140;
         L.bt_reset_zone_h = 90;
-        L.bt_title_font    = &font_tiempos_34;
-        L.bt_status_font   = &font_styrene_28;
-        L.bt_device_font   = &font_styrene_20;
-        L.bt_credit_1_font = &font_styrene_16;
-        L.bt_credit_2_font = &font_styrene_14;
-        L.stat_label_font = &font_styrene_14;
-        L.stat_value_font = &font_styrene_20;
-        L.pct_font  = &font_tiempos_48;
-        L.pill_font = &font_styrene_16;
+        L.bt_title_font    = &font_sans_34;
+        L.bt_status_font   = &font_sans_28;
+        L.bt_device_font   = &font_sans_20;
+        L.bt_credit_1_font = &font_sans_16;
+        L.bt_credit_2_font = &font_sans_14;
+        L.stat_label_font = &font_sans_14;
+        L.stat_value_font = &font_sans_20;
+        L.pct_font  = &font_sans_48;
+        L.pill_font = &font_sans_semibold_16;
     } else {
         // Small layout — tuned for 240x240 (LCD-1.54 and similar square TFTs).
         // Everything shrinks: fonts two steps down, panels ~half height, and
@@ -160,13 +161,13 @@ static void compute_layout(const BoardCaps& c) {
         L.panel_pad_y = 6;
         L.pill_pad_x = 8;
         L.pill_pad_y = 2;
-        L.title_font   = &font_tiempos_34;
-        L.pct_font     = &font_styrene_24;
-        L.ent_pct_font = &font_tiempos_34;
-        L.pill_font    = &font_styrene_14;
-        L.reset_font   = &font_styrene_14;
-        L.pace_font    = &font_styrene_12;
-        L.anim_font    = &font_mono_18;
+        L.title_font   = &font_sans_34;
+        L.pct_font     = &font_sans_24;
+        L.ent_pct_font = &font_sans_34;
+        L.pill_font    = &font_sans_semibold_14;
+        L.reset_font   = &font_sans_14;
+        L.pace_font    = &font_sans_12;
+        L.anim_font    = &font_sans_16;
         // Center the status line in the strip below the weekly panel; flush
         // against the bottom edge it reads as unevenly spaced.
         L.anim_y = -10;
@@ -181,13 +182,13 @@ static void compute_layout(const BoardCaps& c) {
         L.idle_px = 96;
         L.bt_info_panel_h = 90;
         L.bt_reset_zone_h = 60;
-        L.bt_title_font    = &font_tiempos_34;
-        L.bt_status_font   = &font_styrene_20;
-        L.bt_device_font   = &font_styrene_14;
-        L.bt_credit_1_font = &font_styrene_12;
-        L.bt_credit_2_font = &font_styrene_12;
-        L.stat_label_font = &font_styrene_12;
-        L.stat_value_font = &font_styrene_14;
+        L.bt_title_font    = &font_sans_34;
+        L.bt_status_font   = &font_sans_20;
+        L.bt_device_font   = &font_sans_14;
+        L.bt_credit_1_font = &font_sans_12;
+        L.bt_credit_2_font = &font_sans_12;
+        L.stat_label_font = &font_sans_12;
+        L.stat_value_font = &font_sans_14;
         L.stat_rows = 2;
     }
 
@@ -318,13 +319,6 @@ static const char* const anim_messages[] = {
 };
 #define ANIM_MSG_COUNT (sizeof(anim_messages) / sizeof(anim_messages[0]))
 
-// Display serif with the design system's negative tracking (-1px from ~48px up,
-// about half that at 34px, which rounds to none).
-static void set_serif_font(lv_obj_t* obj, const lv_font_t* font) {
-    lv_obj_set_style_text_font(obj, font, 0);
-    lv_obj_set_style_text_letter_space(obj, font == &font_tiempos_34 ? 0 : -1, 0);
-}
-
 static lv_color_t pct_color(float pct) {
     return pct >= 80.0f ? COL_RED : COL_ACCENT;
 }
@@ -449,7 +443,7 @@ static lv_obj_t* make_usage_panel(lv_obj_t* parent, int y, const char* pill_text
 
     *out_pct = lv_label_create(panel);
     lv_label_set_text(*out_pct, "---%");
-    set_serif_font(*out_pct, L.pct_font);
+    lv_obj_set_style_text_font(*out_pct, L.pct_font, 0);
     lv_obj_set_style_text_color(*out_pct, COL_TEXT, 0);
     lv_obj_set_pos(*out_pct, 0, 0);
 
@@ -648,7 +642,7 @@ static void build_stats_workspace(lv_obj_t* tile) {
 
     stats_empty = lv_label_create(tile);
     lv_label_set_text(stats_empty, "No stats yet");
-    lv_obj_set_style_text_font(stats_empty, L.pill_font, 0);
+    lv_obj_set_style_text_font(stats_empty, L.stat_value_font, 0);
     lv_obj_set_style_text_color(stats_empty, COL_DIM, 0);
     lv_obj_center(stats_empty);
 }
@@ -703,7 +697,7 @@ static void build_today_workspace(lv_obj_t* tile) {
 
     today_empty = lv_label_create(tile);
     lv_label_set_text(today_empty, "Nothing yet today");
-    lv_obj_set_style_text_font(today_empty, L.pill_font, 0);
+    lv_obj_set_style_text_font(today_empty, L.stat_value_font, 0);
     lv_obj_set_style_text_color(today_empty, COL_DIM, 0);
     lv_obj_center(today_empty);
 }
@@ -744,7 +738,7 @@ static void build_sessions_workspace(lv_obj_t* tile) {
 
     sess_empty = lv_label_create(tile);
     lv_label_set_text(sess_empty, "No sessions");
-    lv_obj_set_style_text_font(sess_empty, L.pill_font, 0);
+    lv_obj_set_style_text_font(sess_empty, L.stat_value_font, 0);
     lv_obj_set_style_text_color(sess_empty, COL_DIM, 0);
     lv_obj_center(sess_empty);
 }
@@ -842,7 +836,7 @@ static void init_usage_screen(lv_obj_t* scr) {
 
     lbl_title = lv_label_create(usage_container);
     lv_label_set_text(lbl_title, "Usage");
-    set_serif_font(lbl_title, L.title_font);
+    lv_obj_set_style_text_font(lbl_title, L.title_font, 0);
     lv_obj_set_style_text_color(lbl_title, COL_TEXT, 0);
     // The nudge balances the corner logo on the left; smaller on small
     // screens where the logo is 40px and the battery icon sits closer.
@@ -1017,7 +1011,7 @@ void ui_update(const UsageData* data) {
 
     if (data->enterprise) {
         // Spending box: big number-only label + small "%" symbol + desc + pace
-        set_serif_font(lbl_session_pct, L.ent_pct_font);
+        lv_obj_set_style_text_font(lbl_session_pct, L.ent_pct_font, 0);
         lv_label_set_text(lbl_session_label, "Spending");
         lv_obj_add_flag(lbl_session_reset, LV_OBJ_FLAG_HIDDEN);
         lv_obj_clear_flag(lbl_session_pct_sym, LV_OBJ_FLAG_HIDDEN);
@@ -1025,7 +1019,7 @@ void ui_update(const UsageData* data) {
         lv_obj_add_flag(lbl_spending_status,   LV_OBJ_FLAG_HIDDEN);
         if (panel_weekly) lv_obj_clear_flag(panel_weekly, LV_OBJ_FLAG_HIDDEN);
     } else {
-        set_serif_font(lbl_session_pct, L.pct_font);
+        lv_obj_set_style_text_font(lbl_session_pct, L.pct_font, 0);
         lv_label_set_text(lbl_session_label, "Current");
         lv_obj_clear_flag(lbl_session_reset, LV_OBJ_FLAG_HIDDEN);
         lv_obj_add_flag(lbl_session_pct_sym, LV_OBJ_FLAG_HIDDEN);
