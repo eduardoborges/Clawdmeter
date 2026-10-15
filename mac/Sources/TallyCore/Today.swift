@@ -35,8 +35,24 @@ public enum Today {
         return (d["isMeta"] as? Bool) != true && !content.hasPrefix("<")
     }
 
-    /// `{"k":"td","h":<24 chars, messages per hour as '0'..'8'>,"v":[[label, value] x6]}`.
-    public static func message(_ dirs: [URL] = roots, today: Day = Day()) -> JSON {
+    /// Today's numbers, as counted from the transcripts.
+    public struct Summary {
+        public var perHour = Array(repeating: 0, count: 24)   // messages in each local hour
+        public var prompts = 0
+        public var toolCalls = 0
+        public var tokens = 0.0
+        public var sessions = 0
+        public var topProject = "-"
+        public var activeHours: Int { perHour.filter { $0 != 0 }.count }
+
+        public init(perHour: [Int] = Array(repeating: 0, count: 24), prompts: Int = 0, toolCalls: Int = 0,
+                    tokens: Double = 0, sessions: Int = 0, topProject: String = "-") {
+            (self.perHour, self.prompts, self.toolCalls) = (perHour, prompts, toolCalls)
+            (self.tokens, self.sessions, self.topProject) = (tokens, sessions, topProject)
+        }
+    }
+
+    public static func summary(_ dirs: [URL] = roots, today: Day = Day()) -> Summary {
         let utc = DateFormatter()
         utc.locale = Locale(identifier: "en_US_POSIX")
         utc.timeZone = TimeZone(identifier: "UTC")
@@ -87,19 +103,28 @@ public enum Today {
                 }
             }
         }
-        let peak = hours.max()!
-        let levels = hours.map { $0 == 0 ? "0" : String((8 * $0 + peak - 1) / peak) }.joined()
         let busiest = projects.values.max()
-        let top = projectOrder.first { projects[$0] == busiest } ?? "-"
+        return Summary(perHour: hours, prompts: prompts, toolCalls: tools.count, tokens: tokens,
+                       sessions: sessions.count, topProject: projectOrder.first { projects[$0] == busiest } ?? "-")
+    }
+
+    /// `{"k":"td","h":<24 chars, messages per hour as '0'..'8'>,"v":[[label, value] x6]}`.
+    public static func message(from s: Summary) -> JSON {
+        let peak = s.perHour.max()!
+        let levels = s.perHour.map { $0 == 0 ? "0" : String((8 * $0 + peak - 1) / peak) }.joined()
         let values: [(String, String)] = [
-            ("Prompts", Stats.grouped(prompts)),
-            ("Tool calls", Stats.grouped(tools.count)),
-            ("Tokens", Stats.human(tokens)),
-            ("Sessions", String(sessions.count)),
-            ("Top project", String(top.prefix(12))),
-            ("Active hours", String(hours.filter { $0 != 0 }.count)),
+            ("Prompts", Stats.grouped(s.prompts)),
+            ("Tool calls", Stats.grouped(s.toolCalls)),
+            ("Tokens", Stats.human(s.tokens)),
+            ("Sessions", String(s.sessions)),
+            ("Top project", String(s.topProject.prefix(12))),
+            ("Active hours", String(s.activeHours)),
         ]
         return .object([("k", .string("td")), ("h", .string(levels)),
                         ("v", .array(values.map { .array([.string($0.0), .string($0.1)]) }))])
+    }
+
+    public static func message(_ dirs: [URL] = roots, today: Day = Day()) -> JSON {
+        message(from: summary(dirs, today: today))
     }
 }

@@ -20,7 +20,7 @@ public enum Stats {
     }
 
     /// Token counts the way /stats prints them: 43.4b, 140.3m, 12.0k.
-    static func human(_ n: Double) -> String {
+    public static func human(_ n: Double) -> String {
         for (div, unit) in [(1e9, "b"), (1e6, "m"), (1e3, "k")] where n >= div {
             return String(format: "%.1f%@", n / div, unit)
         }
@@ -28,7 +28,7 @@ public enum Stats {
     }
 
     /// 1105 -> "1,105", like Python's f"{n:,}".
-    static func grouped(_ n: Int) -> String {
+    public static func grouped(_ n: Int) -> String {
         let digits = String(abs(n))
         var out = ""
         for (i, c) in digits.enumerated() {
@@ -40,10 +40,37 @@ public enum Stats {
 
     static func days(_ n: Int) -> String { n == 1 ? "\(n) day" : "\(n) days" }
 
+    /// The numbers behind the Stats workspace.
+    public struct Summary {
+        public var start: Day               // the heatmap's first day, a Sunday
+        public var perDay: [Int]            // messages per day from start through today
+        public var levels: [Int]            // 0 to 4, by quarter of the active days
+        public var months: [(String, Int)]  // month labels by week column
+        public var values: [(String, String)]
+    }
+
     /// "hm", a heatmap of messages per day (week columns from the oldest
     /// Sunday, levels 0 to 4 by quarter of the active days, two days per char,
     /// month labels by column), and "st", six formatted numbers.
     public static func messages(cache: [String: Any], today: Day) -> [JSON] {
+        messages(from: summary(cache: cache, today: today))
+    }
+
+    public static func messages(from s: Summary) -> [JSON] {
+        var levels = s.levels
+        if levels.count % 2 == 1 { levels.append(0) }
+        let heat = String(stride(from: 0, to: levels.count, by: 2).map {
+            Character(Unicode.Scalar(UInt8(65 + levels[$0] * 5 + levels[$0 + 1])))
+        })
+        return [
+            .object([("k", .string("hm")), ("n", .int(s.perDay.count)), ("h", .string(heat)),
+                     ("mo", .array(s.months.map { .array([.string($0.0), .int($0.1)]) }))]),
+            .object([("k", .string("st")),
+                     ("v", .array(s.values.map { .array([.string($0.0), .string($0.1)]) }))]),
+        ]
+    }
+
+    public static func summary(cache: [String: Any], today: Day) -> Summary {
         var counts: [String: Int] = [:]
         for a in cache["dailyActivity"] as? [[String: Any]] ?? [] {
             if let date = a["date"] as? String { counts[date] = (a["messageCount"] as? Int) ?? 0 }
@@ -54,15 +81,11 @@ public enum Stats {
         let window = (0..<n).map { counts[start.adding($0).iso] ?? 0 }
         let ranked = window.filter { $0 != 0 }.sorted()
         // Level by rank among active days, so the busiest quarter always reads 4.
-        var levels = window.map { v -> Int in
+        let levels = window.map { v -> Int in
             guard v != 0 else { return 0 }
             let rank = ranked.lastIndex { $0 <= v }! + 1
             return (4 * rank + ranked.count - 1) / ranked.count
         }
-        if levels.count % 2 == 1 { levels.append(0) }
-        let heat = String(stride(from: 0, to: levels.count, by: 2).map {
-            Character(Unicode.Scalar(UInt8(65 + levels[$0] * 5 + levels[$0 + 1])))
-        })
 
         var monthLabels: [(String, Int)] = []
         var last: Int?
@@ -107,19 +130,19 @@ public enum Stats {
             ("Favorite model", String(prettyModel(favorite).prefix(15))),
             ("Current streak", days(current)),
         ]
-        return [
-            .object([("k", .string("hm")), ("n", .int(n)), ("h", .string(heat)),
-                     ("mo", .array(monthLabels.map { .array([.string($0.0), .int($0.1)]) }))]),
-            .object([("k", .string("st")),
-                     ("v", .array(values.map { .array([.string($0.0), .string($0.1)]) }))]),
-        ]
+        return Summary(start: start, perDay: window, levels: levels, months: monthLabels, values: values)
+    }
+
+    /// The summary from the cache file, or nil when it's missing or unreadable.
+    public static func loadSummary(from file: URL = cache, today: Day = Day()) -> Summary? {
+        guard let data = try? Data(contentsOf: file),
+              let cache = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { return nil }
+        return summary(cache: cache, today: today)
     }
 
     /// Today's messages, or none when the cache is missing or unreadable.
     public static func load(from file: URL = cache, today: Day = Day()) -> [JSON] {
-        guard let data = try? Data(contentsOf: file),
-              let cache = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { return [] }
-        return messages(cache: cache, today: today)
+        loadSummary(from: file, today: today).map(messages(from:)) ?? []
     }
 }
 
@@ -150,7 +173,7 @@ public struct Day: Hashable, Comparable {
     /// Local midnight at the start of this day.
     var midnight: Date { Day.calendar.startOfDay(for: date) }
 
-    func adding(_ days: Int) -> Day { Day(Day.calendar.date(byAdding: .day, value: days, to: date)!) }
+    public func adding(_ days: Int) -> Day { Day(Day.calendar.date(byAdding: .day, value: days, to: date)!) }
     func daysSince(_ other: Day) -> Int { Day.calendar.dateComponents([.day], from: other.date, to: date).day! }
     public static func < (a: Day, b: Day) -> Bool { a.date < b.date }
 }

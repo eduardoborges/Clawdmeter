@@ -57,18 +57,41 @@ public enum Sessions {
         return verbs[tool] ?? (tool.hasPrefix("mcp__") ? "Using MCP" : "Working")
     }
 
-    /// `{"k":"ss","v":[["project | title", state, minutes, doing, branch], ...]}`,
-    /// sessions that need you first, then working, then done. Within each, the
-    /// newest alert, task start or finish comes first. See sessions.py for the
-    /// optional "a", "dn", "b" and "n". Deletes files older than maxAge.
-    public static func message(in directory: URL = directory, now: Double = Date().timeIntervalSince1970,
-                               config: Config = Config()) -> JSON {
+    /// One open session, with the text as the hook wrote it.
+    public struct Session: Identifiable {
+        public let id: String          // the session id
+        public let state: String       // "a" needs you, "w" working, "d" done
+        public let project: String
+        public let title: String
+        public let branch: String
+        public let doing: String       // the row's second line, "" when done
+        public let minutes: Int        // since the task started (working) or the last event
+        let order: Double
+
+        public init(id: String, state: String, project: String, title: String, branch: String,
+                    doing: String, minutes: Int, order: Double = 0) {
+            (self.id, self.state, self.project, self.title) = (id, state, project, title)
+            (self.branch, self.doing, self.minutes, self.order) = (branch, doing, minutes, order)
+        }
+    }
+
+    /// Every open session, sorted the way the device lists them, plus what the
+    /// corner Clawd plays and when a long task just finished.
+    public struct Snapshot {
+        public var sessions: [Session] = []
+        public var activity: String?   // laptop, magnifier or cloud
+        public var doneAt: Double?     // finish time of a long task, for a celebration
+    }
+
+    /// Reads the hook's files: sessions that need you first, then working, then
+    /// done. Within each, the newest alert, task start or finish comes first.
+    /// Deletes files older than maxAge.
+    public static func snapshot(in directory: URL = directory, now: Double = Date().timeIntervalSince1970,
+                                config: Config = Config()) -> Snapshot {
         let raw = config.value("done_after")   // digits only, like Python's isdigit()
         let doneAfter = !raw.isEmpty && raw.allSatisfy({ $0.isASCII && $0.isNumber }) ? Int(raw) ?? Self.doneAfter : Self.doneAfter
-        struct Row { var state: String, order: Double, name: String, since: Double, doing: String, branch: String }
-        var rows: [Row] = []
+        var snap = Snapshot()
         var active: (last: Double, tool: String)?
-        var done: Double?
         let files = (try? FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: [.contentModificationDateKey])) ?? []
         for file in files where !file.lastPathComponent.hasPrefix(".") {
             guard let mtime = try? file.resourceValues(forKeys: [.contentModificationDateKey])
@@ -79,47 +102,55 @@ public enum Sessions {
             }
             guard let data = try? Data(contentsOf: file),
                   let d = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-                  let state = states[text(d["e"])] else { continue }
-            var state0 = state
+                  var state = states[text(d["e"])] else { continue }
             // Subagents the hook saw recently. One whose SubagentStop never came
             // (a killed agent) ages out like a quiet session.
             let agents = (d["ag"] as? [String: Any])?.values.compactMap(number)
                 .filter { now - $0 < activeMax } ?? []
-            if !agents.isEmpty && state0 == "d" { state0 = "w" }   // background agents still run
+            if !agents.isEmpty && state == "d" { state = "w" }   // background agents still run
             let start = number(d["st"]), fin = number(d["fin"])
-            let since = state0 == "w" ? start ?? mtime : mtime
+            let since = state == "w" ? start ?? mtime : mtime
             // Rows keep their place while sessions work: a working row moves
             // only when a new prompt starts its task, a done row when it finishes.
-            let order = state0 == "w" ? since : state0 == "d" ? fin ?? mtime : mtime
-            var name = ascii(text(d["p"], or: "?"), 12)
-            let title = ascii(text(d["ti"]), 32)
+            let order = state == "w" ? since : state == "d" ? fin ?? mtime : mtime
+            let tool = text(d["t"])
+            snap.sessions.append(Session(id: file.lastPathComponent, state: state, project: text(d["p"], or: "?"),
+                                         title: text(d["ti"]), branch: text(d["br"]),
+                                         doing: doing(state, tool, agents: agents.count),
+                                         minutes: Int((max(0, now - since) / 60).rounded(.down)), order: order))
+            let last = ([mtime] + agents).max()!
+            if state == "w" && now - last < activeMax && (active == nil || last > active!.last) {
+                active = (last, tool)
+            }
+            if state == "d", doneAfter > 0, let start, let fin, now - fin < doneFresh,
+               fin - start >= Double(doneAfter * 60), snap.doneAt == nil || fin > snap.doneAt! {
+                snap.doneAt = fin
+            }
+        }
+        snap.sessions.sort { a, b in
+            let ga = "awd".firstIndex(of: Character(a.state))!, gb = "awd".firstIndex(of: Character(b.state))!
+            return ga != gb ? ga < gb : a.order > b.order
+        }
+        snap.activity = active.map { activity($0.tool) }
+        return snap
+    }
+
+    /// `{"k":"ss","v":[["project | title", state, minutes, doing, branch], ...]}`
+    /// for the device: ASCII, at most `rows` rows and `maxBytes` bytes. See
+    /// sessions.py for the optional "a", "dn", "b" and "n".
+    public static func message(from snap: Snapshot, config: Config = Config()) -> JSON {
+        var v: [JSON] = snap.sessions.prefix(rows).map { s in
+            var name = ascii(s.project.isEmpty ? "?" : s.project, 12)
+            let title = ascii(s.title, 32)
             if !title.isEmpty {
                 name = "\(name) | \(title)"
                 if name.count > 32 { name = name.prefix(29) + "..." }   // about what a row shows
             }
-            let tool = text(d["t"])
-            rows.append(Row(state: state0, order: order, name: name, since: since,
-                            doing: doing(state0, tool, agents: agents.count), branch: ascii(text(d["br"]), 24)))
-            let last = ([mtime] + agents).max()!
-            if state0 == "w" && now - last < activeMax && (active == nil || last > active!.last) {
-                active = (last, tool)
-            }
-            if state0 == "d", doneAfter > 0, let start, let fin, now - fin < doneFresh,
-               fin - start >= Double(doneAfter * 60), done == nil || fin > done! {
-                done = fin
-            }
-        }
-        rows.sort { a, b in
-            let ga = "awd".firstIndex(of: Character(a.state))!, gb = "awd".firstIndex(of: Character(b.state))!
-            return ga != gb ? ga < gb : a.order > b.order
-        }
-        var v: [JSON] = rows.prefix(Self.rows).map {
-            .array([.string($0.name), .string($0.state), .int(Int((max(0, now - $0.since) / 60).rounded(.down))),
-                    .string($0.doing), .string($0.branch)])
+            return .array([.string(name), .string(s.state), .int(s.minutes), .string(s.doing), .string(ascii(s.branch, 24))])
         }
         var tail: [(String, JSON)] = []
-        if let active { tail.append(("a", .string(activity(active.tool)))) }
-        if let done {
+        if let a = snap.activity { tail.append(("a", .string(a))) }
+        if let done = snap.doneAt {
             tail.append(("dn", .int(Int(done))))
             if config.value("beep") == "on" { tail.append(("b", .int(1))) }
         }
@@ -128,11 +159,17 @@ public enum Sessions {
         // when some are left out, for the device's "+N more".
         while true {
             var pairs: [(String, JSON)] = [("k", .string("ss")), ("v", .array(v))] + tail
-            if rows.count > v.count { pairs.append(("n", .int(rows.count))) }
+            if snap.sessions.count > v.count { pairs.append(("n", .int(snap.sessions.count))) }
             let msg = JSON.object(pairs)
             if v.isEmpty || msg.encoded.utf8.count <= maxBytes { return msg }
             v.removeLast()
         }
+    }
+
+    /// The device message straight from the files.
+    public static func message(in directory: URL = directory, now: Double = Date().timeIntervalSince1970,
+                               config: Config = Config()) -> JSON {
+        message(from: snapshot(in: directory, now: now, config: config), config: config)
     }
 
     static func text(_ value: Any?, or fallback: String = "") -> String {
