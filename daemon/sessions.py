@@ -81,13 +81,14 @@ def _doing(state: str, tool: str, agents: int = 0) -> str:
 def sessions_message(path: Path = SESSIONS_DIR, now: float | None = None,
                      config: Path = CONFIG_FILE) -> dict:
     """{"k":"ss","v":[["project | title", state, minutes, doing, branch], ...]},
-    sessions that need you first, then working, then done, newest first within
-    each. Minutes count from the start of the task for a working session and
-    from the last event otherwise. Doing and the branch share the row's second
-    line; doing is "" for done, the branch "" outside git. A session counts as
-    working while its subagents run, and the row says how many. Deletes files
-    older than MAX_AGE. Adds "a" (what the newest working session is
-    doing) and "dn" (when a long task just finished, plus "b" to beep)."""
+    sessions that need you first, then working, then done. Within each, the
+    newest alert, task start or finish comes first. Minutes count from the
+    start of the task for a working session and from the last event otherwise.
+    Doing and the branch share the row's second line; doing is "" for done, the
+    branch "" outside git. A session counts as working while its subagents run,
+    and the row says how many. Deletes files older than MAX_AGE. Adds "a" (what
+    the newest working session is doing) and "dn" (when a long task just
+    finished, plus "b" to beep)."""
     now = time.time() if now is None else now
     done_after = _setting("done_after", config)
     done_after = int(done_after) if done_after.isdigit() else DONE_AFTER
@@ -119,7 +120,11 @@ def sessions_message(path: Path = SESSIONS_DIR, now: float | None = None,
         title = _ascii(str(d.get("ti") or ""), 40)
         if title:
             name = f"{name} | {title}"[:40]
-        rows.append((state, mtime, name, since,
+        # Rows keep their place while sessions work: a working row moves only
+        # when a new prompt starts its task, a done row when it finishes.
+        order = (since if state == "w" else fin if state == "d"
+                 and isinstance(fin, (int, float)) else mtime)
+        rows.append((state, order, name, since,
                      _doing(state, str(d.get("t") or ""), len(agents)),
                      _ascii(str(d.get("br") or ""), 24)))
         last = max([mtime, *agents])

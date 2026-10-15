@@ -36,8 +36,8 @@ def test_working_row_says_what_and_since_when(tmp_path):
     write_full(tmp_path, "c", now - 120, e="clear", t="Skill")
     write_full(tmp_path, "d", now - 180, e="stop", t="Bash", st=now - 999)
     rows = sessions_message(tmp_path, now, tmp_path / "config")["v"]
-    assert [r[2:4] for r in rows] == [[15, "Editing"], [1, "Using MCP"],
-                                      [2, "Working"], [3, ""]]
+    assert [r[2:4] for r in rows] == [[1, "Using MCP"], [2, "Working"],
+                                      [15, "Editing"], [3, ""]]
 
 
 def test_prunes_stale_caps_rows_and_names(tmp_path):
@@ -145,3 +145,13 @@ def test_message_fits_the_device_buffer(tmp_path):
     msg = sessions_message(tmp_path, now, tmp_path / "config")
     assert 0 < len(msg["v"]) < ROWS
     assert len(json.dumps(msg, separators=(",", ":"))) <= MAX_BYTES
+
+
+def test_rows_keep_their_place_while_working(tmp_path):
+    now = 1_000_000.0
+    write_full(tmp_path, "old", now - 1, p="old", e="clear", st=now - 600)
+    write_full(tmp_path, "new", now - 30, p="new", e="clear", st=now - 60)
+    write_full(tmp_path, "d1", now - 5, p="d1", e="stop", fin=now - 300)
+    write_full(tmp_path, "d2", now - 200, p="d2", e="stop", fin=now - 200)
+    msg = sessions_message(tmp_path, now, tmp_path / "config")
+    assert [r[0] for r in msg["v"]] == ["new", "old", "d2", "d1"]
