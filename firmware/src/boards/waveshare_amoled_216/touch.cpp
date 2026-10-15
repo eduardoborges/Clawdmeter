@@ -23,8 +23,9 @@ void touch_hal_init(void) {
         return;
     }
     touch.setMaxCoordinates(LCD_WIDTH, LCD_HEIGHT);
-    // The panel's own frame at rotation 0, measured with swipes on hardware.
-    touch.setMirrorXY(false, true);
+    // The controller already reports in the panel's frame at rotation 0, so it
+    // needs no swap or mirror. Checked by tapping the same corner in all four
+    // orientations.
     pinMode(TP_INT, INPUT_PULLUP);
     attachInterrupt(TP_INT, touch_isr, FALLING);
     Serial.println("Touch init OK");
