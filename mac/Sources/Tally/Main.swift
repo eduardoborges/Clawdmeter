@@ -1,4 +1,5 @@
-import Foundation
+import AppKit
+import SwiftUI
 import TallyCore
 
 @main
@@ -45,6 +46,35 @@ enum Main {
             done.wait()
             return
         }
+        // `--render <png>` draws the panel with made-up data, to work on the
+        // design without clicking the menu bar.
+        if let i = args.firstIndex(of: "--render"), i + 1 < args.count {
+            let what = i + 2 < args.count ? args[i + 2] : "now"
+            render(PopoverView(dashboard: .sample, linkStatus: "Connected", connected: true, onSettings: {},
+                               tab: what == "activity" ? .activity : .now), to: args[i + 1])
+            return
+        }
         TallyApp.main()
     }
+}
+
+@MainActor
+func render(_ view: some View, to path: String) {
+    // An offscreen window draws AppKit controls too, which ImageRenderer leaves blank.
+    _ = NSApplication.shared
+    let host = NSHostingView(rootView: view)
+    host.frame.size = host.fittingSize
+    let window = NSWindow(contentRect: host.frame, styleMask: [.borderless], backing: .buffered, defer: false)
+    window.appearance = NSAppearance(named: .darkAqua)
+    window.contentView = host
+    host.layoutSubtreeIfNeeded()
+    RunLoop.current.run(until: Date().addingTimeInterval(0.3))   // let charts and tasks settle
+    let size = host.bounds.size
+    guard let rep = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: Int(size.width * 2), pixelsHigh: Int(size.height * 2),
+                                     bitsPerSample: 8, samplesPerPixel: 4, hasAlpha: true, isPlanar: false,
+                                     colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0) else { exit(1) }
+    rep.size = size
+    host.cacheDisplay(in: host.bounds, to: rep)
+    guard let png = rep.representation(using: .png, properties: [:]) else { exit(1) }
+    try? png.write(to: URL(fileURLWithPath: path))
 }
