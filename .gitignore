@@ -22,3 +22,6 @@ __pycache__/
 # Mac app build output
 mac/.build/
 mac/build/
+
+# Firmware zips from tools/package_firmware.py
+dist/

@@ -28,6 +28,23 @@ enum Main {
             }
             return
         }
+        // `--flash <zip> [--port <port>]` flashes a board without the window.
+        if let i = args.firstIndex(of: "--flash"), i + 1 < args.count {
+            let zip = URL(fileURLWithPath: args[i + 1])
+            let port = args.firstIndex(of: "--port").map { args[$0 + 1] } ?? Firmware.ports().first ?? ""
+            let done = DispatchSemaphore(value: 0)
+            Task.detached {
+                do {
+                    try await Firmware.flash(zip: zip, port: port, env: nil, progress: { _ in }, output: { print($0) })
+                    print("flashed")
+                } catch {
+                    print("failed: \(error.localizedDescription)")
+                }
+                done.signal()
+            }
+            done.wait()
+            return
+        }
         TallyApp.main()
     }
 }
