@@ -6,6 +6,7 @@
 #   attention-hook.sh tool    PreToolUse (every tool)
 #   attention-hook.sh stop    Stop
 #   attention-hook.sh end     SessionEnd
+#   attention-hook.sh subagent SubagentStop
 # Every call also records the session's last event in sessions/<session id>,
 # with the last tool, when the current task started (st) and when it
 # finished (fin, set only by Stop: the idle prompt rewrites the file later).
@@ -16,6 +17,20 @@ D="$HOME/.config/claude-usage-monitor"
 mkdir -p "$D/sessions" || exit 0
 in=$(cat)
 s=$(printf '%s' "$in" | jq -r '.session_id // empty' | tr -cd 'A-Za-z0-9_-')
+f="$D/sessions/$s"
+# A subagent's events carry its parent's session id. They only update ag
+# (agent id -> last event) and keep the file's mtime, so the row shows the
+# parent's name, state and age, and an agent can't clear the parent's alert.
+a=$(printf '%s' "$in" | jq -r '.agent_id // empty' | tr -cd 'A-Za-z0-9_-')
+if [ -n "$a" ] && [ "$1" != alert ]; then
+  t="$D/sessions/.$s.$$"
+  [ -n "$s" ] && jq -c --arg a "$a" --arg ev "$1" --argjson now "$(date +%s)" \
+      'if $ev == "subagent" then del(.ag[$a]) else .ag[$a] = $now end' "$f" > "$t" \
+    && touch -r "$f" "$t" && mv "$t" "$f"
+  rm -f "$t"
+  exit 0
+fi
+[ "$1" = subagent ] && exit 0
 case "$1" in
   alert)
     printf '%s' "$in" | jq -c --arg s "$s" '{m: (.message // .tool_input.questions[0].question // ""),
@@ -31,7 +46,6 @@ esac
 e=$1
 [ "$e" = alert ] && [ "$(printf '%s' "$in" | jq -r '.notification_type // empty')" = idle_prompt ] && e=stop
 [ "$e" = tool ] && e=clear
-f="$D/sessions/$s"
 if [ "$1" = end ]; then
   rm -f "$f"
 else
@@ -40,7 +54,7 @@ else
       .hook_event_name as $h
       | {p: ((.cwd // "") | split("/") | last), e: $e,
          t: (if $h == "PreToolUse" then .tool_name elif $h == "UserPromptSubmit" then "" else ($o.t // "") end),
-         st: (if $h == "UserPromptSubmit" then $now else ($o.st // $now) end)}
+         st: (if $h == "UserPromptSubmit" then $now else ($o.st // $now) end), ag: $o.ag}
       | if $h == "Stop" then .fin = $now elif $h == "UserPromptSubmit" then . else .fin = $o.fin end
       | del(.. | nulls)' \
     > "$D/sessions/.$s.$$" && mv "$D/sessions/.$s.$$" "$f"

@@ -226,6 +226,9 @@ When a Claude Code session is waiting on you (a permission prompt, a question, o
     "Stop": [
       { "hooks": [{ "type": "command", "command": "/path/to/Clawdmeter/daemon/attention-hook.sh stop" }] }
     ],
+    "SubagentStop": [
+      { "hooks": [{ "type": "command", "command": "/path/to/Clawdmeter/daemon/attention-hook.sh subagent" }] }
+    ],
     "SessionEnd": [
       { "hooks": [{ "type": "command", "command": "/path/to/Clawdmeter/daemon/attention-hook.sh end" }] }
     ]
@@ -234,6 +237,8 @@ When a Claude Code session is waiting on you (a permission prompt, a question, o
 ```
 
 `Stop` and `SessionEnd` also feed the Sessions workspace. Without `Stop`, a session that has finished its reply shows as working until Claude Code's idle prompt, about a minute later, and finished tasks get no celebration. Without `SessionEnd`, a closed session stays on the list for up to six hours.
+
+`SubagentStop` tracks how many subagents a session has running. While any of them run, the row stays in the working group and its second line reads "2 agents working", even after the main reply has ended. Without this hook, a finished agent keeps counting for up to 10 minutes.
 
 Clawd walks back to his corner when you tap the screen, after 2 minutes, or when that session moves on (you answer, approve a tool, or send a prompt). He shows up about 5 seconds after Claude Code raises the notification, because the daemon checks once per tick. To hear a beep as well, set `beep = on` in `~/.config/claude-usage-monitor/config` (the installers ask). The macOS and Linux daemons handle these alerts; the Windows daemon doesn't yet.
 
