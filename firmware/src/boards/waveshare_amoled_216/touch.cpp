@@ -1,4 +1,5 @@
 #include "../../hal/touch_hal.h"
+#include "../../hal/imu_hal.h"
 #include "board.h"
 #include <Arduino.h>
 #include <Wire.h>
@@ -22,8 +23,8 @@ void touch_hal_init(void) {
         return;
     }
     touch.setMaxCoordinates(LCD_WIDTH, LCD_HEIGHT);
-    touch.setSwapXY(true);
-    touch.setMirrorXY(true, false);
+    // The panel's own frame at rotation 0, measured with swipes on hardware.
+    touch.setMirrorXY(false, true);
     pinMode(TP_INT, INPUT_PULLUP);
     attachInterrupt(TP_INT, touch_isr, FALLING);
     Serial.println("Touch init OK");
@@ -42,7 +43,15 @@ void touch_hal_read(uint16_t* x, uint16_t* y, bool* pressed) {
             touch_pressed = false;
         }
     }
-    *x = touch_x;
-    *y = touch_y;
+    // The panel is turned in software (display.cpp), so LVGL always draws at
+    // 0°. Undo the same turn here or a swipe reads as the wrong direction.
+    const uint16_t m = LCD_WIDTH - 1;
+    const uint16_t px = touch_x < m ? touch_x : m, py = touch_y < m ? touch_y : m;
+    switch (imu_hal_rotation_quadrant()) {
+    case 1:  *x = py;     *y = m - px; break;
+    case 2:  *x = m - px; *y = m - py; break;
+    case 3:  *x = m - py; *y = px;     break;
+    default: *x = px;     *y = py;     break;
+    }
     *pressed = touch_pressed;
 }
