@@ -3,11 +3,11 @@
 <plist version="1.0">
 <dict>
 	<key>CFBundleIdentifier</key>
-	<string>dev.eduardoborges.clawdmeter</string>
+	<string>dev.eduardoborges.tally</string>
 	<key>CFBundleName</key>
-	<string>Clawdmeter</string>
+	<string>Tally</string>
 	<key>CFBundleExecutable</key>
-	<string>Clawdmeter</string>
+	<string>Tally</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
@@ -19,6 +19,6 @@
 	<key>LSUIElement</key>
 	<true/>
 	<key>NSBluetoothAlwaysUsageDescription</key>
-	<string>Clawdmeter sends your Claude Code usage to the display on your desk over Bluetooth.</string>
+	<string>Tally sends your Claude Code usage to the display on your desk over Bluetooth.</string>
 </dict>
 </plist>

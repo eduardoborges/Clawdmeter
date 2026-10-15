@@ -15,15 +15,15 @@ private let link: DeviceLink = {
 }()
 
 @main
-struct ClawdmeterApp: App {
+struct TallyApp: App {
     var body: some Scene {
-        MenuBarExtra("Clawdmeter", systemImage: "gauge.with.dots.needle.33percent") {
+        MenuBarExtra("Tally", systemImage: "gauge.with.dots.needle.33percent") {
             Text(link.status)
             if link.maxWrite > 0 {
                 Text("Up to \(link.maxWrite) bytes per message")
             }
             Divider()
-            Button("Quit Clawdmeter") { NSApplication.shared.terminate(nil) }
+            Button("Quit Tally") { NSApplication.shared.terminate(nil) }
                 .keyboardShortcut("q")
         }
     }

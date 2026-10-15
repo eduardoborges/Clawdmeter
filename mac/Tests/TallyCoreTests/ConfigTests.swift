@@ -1,6 +1,6 @@
 import Foundation
 import Testing
-@testable import ClawdmeterCore
+@testable import TallyCore
 
 @Test func configSkipsCommentsAndTakesTheFirstValidValue() throws {
     let file = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)

@@ -1,14 +1,14 @@
 import Foundation
 
 private let logFile = FileManager.default.homeDirectoryForCurrentUser
-    .appending(path: "Library/Logs/Clawdmeter.log")
+    .appending(path: "Library/Logs/Tally.log")
 private let stamp: DateFormatter = {
     let f = DateFormatter()
     f.dateFormat = "HH:mm:ss"
     return f
 }()
 
-/// Appends a timestamped line to ~/Library/Logs/Clawdmeter.log.
+/// Appends a timestamped line to ~/Library/Logs/Tally.log.
 func log(_ message: String) {
     let line = Data("[\(stamp.string(from: .now))] \(message)\n".utf8)
     if let handle = try? FileHandle(forWritingTo: logFile) {
