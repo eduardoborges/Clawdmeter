@@ -19,6 +19,11 @@ public struct Config {
         }
     }
 
+    /// The last value of `key` as written, or "" when it isn't set.
+    public func last(_ key: String) -> String {
+        pairs.last { $0.key == key }?.value ?? ""
+    }
+
     /// The first value of `key`, lowercased, or "" when it isn't set.
     public func value(_ key: String) -> String {
         pairs.first { $0.key == key }?.value.lowercased() ?? ""
