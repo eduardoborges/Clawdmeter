@@ -12,17 +12,22 @@ final class DeviceLink: NSObject {
     static let tx = CBUUID(string: "4c41555a-4465-7669-6365-000000000003")
     static let req = CBUUID(string: "4c41555a-4465-7669-6365-000000000004")
     static let hid = CBUUID(string: "1812")
+    static let connectTimeout = 20.0
 
     private(set) var status = "Starting"
+    private(set) var isReady = false
     private(set) var takesStats = false
     private(set) var maxWrite = 0
 
-    /// Runs once the data service is ready, after every connect.
+    /// Runs once the data service is ready and TX is read, after every connect.
     @ObservationIgnored var onReady: (() -> Void)?
+    /// Runs when the device asks for fresh data (a notify on REQ).
+    @ObservationIgnored var onRefresh: (() -> Void)?
 
     @ObservationIgnored private var central: CBCentralManager!
     @ObservationIgnored private var device: CBPeripheral?
     @ObservationIgnored private var rx: CBCharacteristic?
+    @ObservationIgnored private var retryDelay = 1.0
 
     override init() {
         super.init()
@@ -41,15 +46,23 @@ final class DeviceLink: NSObject {
         found.delegate = self
         status = "Connecting"
         central.connect(found)
+        // CoreBluetooth waits forever on a half-open link, which once left the
+        // Python daemon stuck for 13 hours. Give up and start over instead.
+        DispatchQueue.main.asyncAfter(deadline: .now() + Self.connectTimeout) { [weak self] in
+            guard let self, self.device === found, !self.isReady else { return }
+            log("Connect timed out")
+            self.central.cancelPeripheralConnection(found)
+            self.retry()
+        }
     }
 
     /// Writes one message to RX. macOS reports a 253-byte limit for writes
     /// without response but delivers longer ones: a 485-byte message reached
-    /// the 2.16 intact.
+    /// the 2.16 intact. Like bleak, it doesn't wait for canSendWriteWithoutResponse:
+    /// the ready callback never came after a few writes in a row.
     @discardableResult
     func send(_ message: Data) -> Bool {
         guard let device, let rx else { return false }
-        log("Sending \(message.count) bytes: \(String(decoding: message, as: UTF8.self))")
         device.writeValue(message, for: rx, type: .withoutResponse)
         return true
     }
@@ -57,7 +70,22 @@ final class DeviceLink: NSObject {
     private func retry() {
         device = nil
         rx = nil
-        DispatchQueue.main.asyncAfter(deadline: .now() + 5) { [weak self] in self?.findDevice() }
+        isReady = false
+        takesStats = false
+        let delay = retryDelay
+        retryDelay = min(retryDelay * 2, 60)
+        DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
+            guard let self, self.device == nil, self.central.state == .poweredOn else { return }
+            self.findDevice()
+        }
+    }
+
+    private func ready() {
+        guard !isReady else { return }
+        isReady = true
+        retryDelay = 1
+        status = "Connected"
+        onReady?()
     }
 }
 
@@ -100,19 +128,29 @@ extension DeviceLink: CBPeripheralDelegate {
 
     func peripheral(_ peripheral: CBPeripheral, didDiscoverCharacteristicsFor service: CBService, error: Error?) {
         maxWrite = peripheral.maximumWriteValueLength(for: .withoutResponse)
-        log("Characteristics: \(service.characteristics?.map(\.uuid.uuidString) ?? []), max write \(maxWrite)")
-        rx = service.characteristics?.first { $0.uuid == Self.rx }
-        if let tx = service.characteristics?.first(where: { $0.uuid == Self.tx }) {
-            peripheral.readValue(for: tx)
+        let chars = service.characteristics ?? []
+        rx = chars.first { $0.uuid == Self.rx }
+        if let req = chars.first(where: { $0.uuid == Self.req }) { peripheral.setNotifyValue(true, for: req) }
+        if let tx = chars.first(where: { $0.uuid == Self.tx }) {
+            peripheral.readValue(for: tx)   // ready() once the value is in
+        } else {
+            ready()
         }
-        status = "Connected"
-        onReady?()
     }
 
     func peripheral(_ peripheral: CBPeripheral, didUpdateValueFor characteristic: CBCharacteristic, error: Error?) {
-        guard characteristic.uuid == Self.tx, let value = characteristic.value else { return }
-        let text = String(decoding: value, as: UTF8.self)
-        takesStats = text.contains("\"stats\":1")
-        log("TX: \(text)")
+        switch characteristic.uuid {
+        case Self.tx:
+            // Firmware that takes the k messages says "stats":1 here.
+            let text = String(decoding: characteristic.value ?? Data(), as: UTF8.self)
+            takesStats = text.contains("\"stats\":1")
+            log("TX: \(text), max write \(maxWrite)")
+            ready()
+        case Self.req:
+            log("Refresh requested by the device")
+            onRefresh?()
+        default:
+            break
+        }
     }
 }
