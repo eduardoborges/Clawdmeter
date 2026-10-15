@@ -11,7 +11,7 @@ struct ActivityView: View {
             Panel(title: "Last 26 weeks", detail: stats.values.first { $0.0 == "Active days" }.map { "\($0.1) days" }) {
                 Heatmap(stats: stats)
             }
-            Panel(title: "All time") {
+            Block(title: "All time") {
                 let shown = stats.values.filter { $0.0 != "Active days" }
                 Grid(alignment: .leading, horizontalSpacing: 12, verticalSpacing: 12) {
                     ForEach(Array(stride(from: 0, to: shown.count, by: 3)), id: \.self) { i in
@@ -28,7 +28,7 @@ struct ActivityView: View {
         }
         if let today, let peak = today.perHour.indices.max(by: { today.perHour[$0] < today.perHour[$1] }),
            today.perHour[peak] > 0 {
-            Panel(title: "Today") {
+            Block(title: "Today") {
                 HStack(spacing: 0) {
                     Figure(value: String(format: "%02d:00", peak), label: "busiest hour")
                     Figure(value: today.topProject, label: "top project")

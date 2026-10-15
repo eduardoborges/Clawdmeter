@@ -38,9 +38,8 @@ struct PopoverView: View {
     private var header: some View {
         HStack(alignment: .firstTextBaseline, spacing: 8) {
             Text("Tally").font(.system(size: 15, weight: .semibold))
-            Circle().fill(connected ? Theme.good : Theme.faint).frame(width: 6, height: 6)
-                .alignmentGuide(.firstTextBaseline) { $0[.bottom] - 1 }
-            Text(connected ? "Display connected" : linkStatus).font(.system(size: 11)).foregroundStyle(Theme.dim)
+            Text(connected ? "Display connected" : linkStatus).font(.system(size: 11))
+                .foregroundStyle(connected ? Theme.dim : Theme.accent)
             Spacer()
             if let plan = dashboard.usage?.plan {
                 Text(plan)
@@ -111,6 +110,27 @@ struct Panel<Content: View>: View {
     }
 }
 
+/// A titled block with no box, set off from the one above by a hairline.
+/// Only the usage meters get a panel; everything else reads as a list.
+struct Block<Content: View>: View {
+    var title: String
+    var detail: String?
+    @ViewBuilder var content: Content
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Rectangle().fill(Theme.line).frame(height: 1)
+            HStack(alignment: .firstTextBaseline) {
+                Text(title).font(.system(size: 12, weight: .semibold)).foregroundStyle(Theme.dim)
+                Spacer()
+                if let detail { Text(detail).font(Theme.mono).foregroundStyle(Theme.faint) }
+            }
+            content
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
 // MARK: Usage
 
 private struct UsagePanel: View {
@@ -128,8 +148,13 @@ private struct UsagePanel: View {
                     UsageBar(label: "Weekly", pct: usage.weekly, note: "resets in \(duration(usage.weeklyReset))")
                 }
             }
+        } else if noToken {
+            Panel { Empty(text: "No Claude Code login found. Run claude to sign in.") }
         } else {
-            Panel { Empty(text: noToken ? "No Claude Code login found." : "Waiting for the first reading.") }
+            HStack(spacing: 10) {
+                UsageBar(label: "5-hour", pct: nil, note: "waiting for a reading")
+                UsageBar(label: "Weekly", pct: nil, note: "waiting for a reading")
+            }
         }
     }
 }
@@ -137,21 +162,27 @@ private struct UsagePanel: View {
 /// The display's usage panel: the percentage, a bar and when it resets.
 private struct UsageBar: View {
     let label: String
-    let pct: Int
+    let pct: Int?   // nil draws the panel's shape while the first reading loads
     let note: String
 
     var body: some View {
         Panel {
             HStack(alignment: .firstTextBaseline, spacing: 1) {
-                Text("\(pct)").font(.system(size: 30, weight: .semibold)).monospacedDigit()
-                Text("%").font(.system(size: 15, weight: .medium)).foregroundStyle(Theme.dim)
+                if let pct {
+                    Text("\(pct)").font(.system(size: 30, weight: .semibold)).monospacedDigit()
+                    Text("%").font(.system(size: 15, weight: .medium)).foregroundStyle(Theme.dim)
+                } else {
+                    RoundedRectangle(cornerRadius: 3).fill(Theme.track).frame(width: 52, height: 26)
+                        .padding(.vertical, 5)
+                }
                 Spacer()
                 Text(label).font(.system(size: 11, weight: .medium)).foregroundStyle(Theme.dim)
             }
             GeometryReader { geo in
                 ZStack(alignment: .leading) {
                     Capsule().fill(Theme.track)
-                    Capsule().fill(Theme.bar(pct)).frame(width: geo.size.width * CGFloat(min(max(pct, 0), 100)) / 100)
+                    Capsule().fill(Theme.bar(pct ?? 0))
+                        .frame(width: geo.size.width * CGFloat(min(max(pct ?? 0, 0), 100)) / 100)
                 }
             }
             .frame(height: 5)
@@ -175,7 +206,7 @@ private struct SessionsPanel: View {
     }
 
     var body: some View {
-        Panel(title: "Sessions", detail: detail) {
+        Block(title: "Sessions", detail: detail) {
             if sessions.isEmpty {
                 Empty(text: "No open Claude Code sessions.")
             } else {
@@ -199,10 +230,12 @@ private struct SessionsPanel: View {
 private struct SessionMark: View {
     let state: String
     static let frames = ["·", "✢", "✳", "✶", "✻", "✽"]
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         TimelineView(.periodic(from: .now, by: 0.12)) { context in
-            let step = Int(context.date.timeIntervalSinceReferenceDate / 0.12)
+            // With Reduce Motion on, the marks hold still on their middle frame.
+            let step = reduceMotion ? 3 : Int(context.date.timeIntervalSinceReferenceDate / 0.12)
             switch state {
             case "w":
                 let phase = step % 10   // up the frames and back down
@@ -251,7 +284,7 @@ private struct TodayPanel: View {
     let today: Today.Summary?
 
     var body: some View {
-        Panel(title: "Today", detail: today.map { "\(Stats.grouped($0.prompts)) prompts" }) {
+        Block(title: "Today", detail: today.map { "\(Stats.grouped($0.prompts)) prompts" }) {
             if let today {
                 Chart {
                     ForEach(Array(today.perHour.enumerated()), id: \.offset) { hour, count in

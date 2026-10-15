@@ -67,7 +67,10 @@ enum Main {
             if what.hasPrefix("settings-") {
                 render(SettingsView(tab: String(what.dropFirst("settings-".count))), to: args[i + 1])
             } else {
-                render(PopoverView(dashboard: .sample, linkStatus: "Connected", connected: true, onSettings: {},
+                let dashboard = Dashboard.sample
+                if what == "loading" { dashboard.usage = nil }   // the panel before the first reading
+                render(PopoverView(dashboard: dashboard, linkStatus: what == "loading" ? "Looking for the display" : "Connected",
+                                   connected: what != "loading", onSettings: {},
                                    tab: what == "activity" ? .activity : .now), to: args[i + 1])
             }
             return
