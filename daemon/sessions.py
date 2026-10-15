@@ -62,12 +62,15 @@ def _activity(tool: str) -> str:
     return "cloud"
 
 
-def _doing(state: str, tool: str) -> str:
+def _doing(state: str, tool: str, agents: int = 0) -> str:
     """The row's second line: what a working session does, or that it waits for you."""
     if state == "a":
         return "Needs your input"
     if state != "w":
         return ""
+    if agents:
+        n = f"{agents} agent{'s' if agents > 1 else ''}"
+        return n + " working" if agents < 10 else n   # the firmware keeps 16 chars
     if not tool:
         return "Thinking"
     return DOING.get(tool, "Using MCP" if tool.startswith("mcp__") else "Working")
@@ -78,7 +81,8 @@ def sessions_message(path: Path = SESSIONS_DIR, now: float | None = None,
     """{"k":"ss","v":[[project, state, minutes, doing], ...]}, sessions that
     need you first, then working, then done, newest first within each. Minutes
     count from the start of the task for a working session and from the last
-    event otherwise; doing is the row's second line, "" for done. Deletes
+    event otherwise; doing is the row's second line, "" for done. A session
+    counts as working while its subagents run, and the row says how many. Deletes
     files older than MAX_AGE. Adds "a" (what the newest working session is
     doing) and "dn" (when a long task just finished, plus "b" to beep)."""
     now = time.time() if now is None else now
@@ -99,12 +103,20 @@ def sessions_message(path: Path = SESSIONS_DIR, now: float | None = None,
         state = STATE.get(d.get("e")) if isinstance(d, dict) else None
         if not state:
             continue
+        # Subagents the hook saw recently. One whose SubagentStop never came
+        # (a killed agent) ages out like a quiet session.
+        ag = d.get("ag")
+        agents = [t for t in ag.values() if isinstance(t, (int, float))
+                  and now - t < ACTIVE_MAX] if isinstance(ag, dict) else []
+        if agents and state == "d":
+            state = "w"   # its reply ended, but background agents still run
         start, fin = d.get("st"), d.get("fin")
         since = start if state == "w" and isinstance(start, (int, float)) else mtime
         rows.append((state, mtime, _ascii(str(d.get("p") or "?"), 12), since,
-                     _doing(state, str(d.get("t") or ""))))
-        if state == "w" and now - mtime < ACTIVE_MAX and (not active or mtime > active[0]):
-            active = (mtime, str(d.get("t") or ""))
+                     _doing(state, str(d.get("t") or ""), len(agents))))
+        last = max([mtime, *agents])
+        if state == "w" and now - last < ACTIVE_MAX and (not active or last > active[0]):
+            active = (last, str(d.get("t") or ""))
         if (state == "d" and done_after and isinstance(start, (int, float))
                 and isinstance(fin, (int, float)) and now - fin < DONE_FRESH
                 and fin - start >= done_after * 60 and (not done or fin > done)):

@@ -98,3 +98,24 @@ def test_long_task_finishing_is_announced_once(tmp_path):
     assert "dn" not in sessions_message(sessions, now, cfg)
     cfg.write_text("done_after = 0\n")
     assert "dn" not in sessions_message(sessions, now, cfg)
+
+
+def test_subagents_keep_the_row_working(tmp_path):
+    now = 1_000_000.0
+    write_full(tmp_path, "a", now - 300, e="stop", t="Agent", st=now - 600,
+               ag={"x": now, "y": now - 20})
+    write_full(tmp_path, "b", now - 5, e="clear", t="Read", ag={"z": now - 1})
+    write_full(tmp_path, "c", now - 5, e="alert", ag={"z": now - 1})
+    msg = sessions_message(tmp_path, now, tmp_path / "config")
+    assert [r[1:] for r in msg["v"]] == [["a", 0, "Needs your input"],
+                                         ["w", 0, "1 agent working"],
+                                         ["w", 10, "2 agents working"]]
+    assert msg["a"] == "cloud"   # a parent waiting on agents is still active
+
+
+def test_stale_subagents_are_ignored(tmp_path):
+    now = 1_000_000.0
+    write_full(tmp_path, "a", now - 300, e="stop", ag={"x": now - ACTIVE_MAX - 1})
+    write_full(tmp_path, "b", now - 5, e="clear", t="Read", ag={})
+    assert [r[1:] for r in sessions_message(tmp_path, now, tmp_path / "config")["v"]] == [
+        ["w", 0, "Reading"], ["d", 5, ""]]
