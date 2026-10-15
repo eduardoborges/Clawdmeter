@@ -54,6 +54,7 @@ struct SessionsData {
         char state;          // 'a' needs you, 'w' working, 'd' done
         uint16_t mins;       // minutes since the task started (working) or the last event
         char doing[17];      // second line: what it is doing, "" for done
+        char branch[25];     // second line too, "" outside git
     } row[SESSION_ROWS];
     uint8_t rows;
     char activity[12];       // animation the corner Clawd plays while a session works, "" = none

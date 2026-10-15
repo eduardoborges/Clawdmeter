@@ -712,9 +712,9 @@ static void build_today_workspace(lv_obj_t* tile) {
 
 // ---- Sessions workspace: one row per open Claude Code session. A mark on the
 // left shows the state (a turning spinner while it works), then the project
-// and how long, and on a second line what it is doing. Rows are laid out in
-// ui_update_sessions, since done rows take one line and the others two.
-struct SessRow { lv_obj_t *mark, *name, *time, *doing, *rule; };
+// and how long, and on a second line the git branch and what it is doing. Rows
+// are laid out in ui_update_sessions, since a row with neither takes one line.
+struct SessRow { lv_obj_t *mark, *name, *time, *branch, *doing, *rule; };
 static SessRow   sess[SESSION_ROWS];
 static char      sess_state[SESSION_ROWS];   // what each row shows, for sess_tick
 static lv_obj_t* sess_empty;
@@ -778,6 +778,9 @@ static void build_sessions_workspace(lv_obj_t* tile) {
         lv_label_set_long_mode(r.name, LV_LABEL_LONG_DOT);
         r.time  = sess_label(tile, L.stat_label_font);
         lv_obj_set_style_text_color(r.time, COL_DIM, 0);
+        r.branch = sess_label(tile, L.stat_label_font);
+        lv_label_set_long_mode(r.branch, LV_LABEL_LONG_DOT);
+        lv_obj_set_style_text_color(r.branch, COL_DIM, 0);
         r.doing = sess_label(tile, L.stat_label_font);
         r.rule  = lv_obj_create(tile);
         lv_obj_remove_style_all(r.rule);
@@ -1379,13 +1382,14 @@ void ui_update_sessions(const SessionsData* sessions) {
         SessRow& w = sess[i];
         const auto& r = sessions->row[i];
         // Small screens get one line per row.
-        const bool two = i < sessions->rows && r.doing[0] && L.scr_h >= 300;
+        const bool two = i < sessions->rows && (r.doing[0] || r.branch[0]) && L.scr_h >= 300;
         const int32_t h = name_h + (two ? sub_h : 0);
         const bool shown = i < sessions->rows && y + h <= bottom;
         sess_state[i] = shown ? r.state : 0;
         lv_obj_set_flag(w.mark, LV_OBJ_FLAG_HIDDEN, !shown);
         lv_obj_set_flag(w.name, LV_OBJ_FLAG_HIDDEN, !shown);
         lv_obj_set_flag(w.time, LV_OBJ_FLAG_HIDDEN, !shown);
+        lv_obj_set_flag(w.branch, LV_OBJ_FLAG_HIDDEN, !two || !shown);
         lv_obj_set_flag(w.doing, LV_OBJ_FLAG_HIDDEN, !two || !shown);
         lv_obj_add_flag(w.rule, LV_OBJ_FLAG_HIDDEN);
         if (!shown) continue;
@@ -1412,10 +1416,15 @@ void ui_update_sessions(const SessionsData* sessions) {
         lv_obj_set_size(w.name, L.content_w - sess_mark_w - time_w - L.margin / 2, name_h);
         lv_obj_set_pos(w.name, text_x, y);
 
+        // The branch goes under the name and what it is doing under the time.
         if (two) {
             lv_label_set_text_fmt(w.doing, r.state == 'w' ? "%s\xE2\x80\xA6" : "%s", r.doing);
             lv_obj_set_style_text_color(w.doing, r.state == 'a' ? COL_ACCENT : COL_DIM, 0);
-            lv_obj_set_pos(w.doing, text_x, y + name_h);
+            const int32_t doing_w = text_width(lv_label_get_text(w.doing), L.stat_label_font);
+            lv_obj_set_pos(w.doing, L.margin + L.content_w - doing_w, y + name_h);
+            lv_label_set_text(w.branch, r.branch);
+            lv_obj_set_size(w.branch, L.content_w - sess_mark_w - doing_w - L.margin / 2, sub_h);
+            lv_obj_set_pos(w.branch, text_x, y + name_h);
         }
         lv_obj_set_pos(w.rule, L.margin, y + h + gap / 2);
         y += h + gap;
