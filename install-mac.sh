@@ -1,5 +1,5 @@
 #!/bin/bash
-# macOS installer for Clawdmeter daemon (Python + bleak + launchd).
+# macOS installer for Tally daemon (Python + bleak + launchd).
 # Mirrors install.sh but uses LaunchAgents instead of systemd user units.
 set -e
 
@@ -149,7 +149,7 @@ configure_beep() {
     fi
 }
 
-echo "=== Clawdmeter macOS install ==="
+echo "=== Tally macOS install ==="
 echo ""
 
 echo "[1/6] Checking prerequisites..."
@@ -280,7 +280,7 @@ echo ""
 echo "First-time Bluetooth pairing (after firmware is flashed):"
 echo "  1. Power on the device."
 echo "  2. Open System Settings → Bluetooth."
-echo "  3. Click 'Connect' next to 'Clawdmeter'."
+echo "  3. Click 'Connect' next to 'Tally'."
 echo "  4. The daemon will discover it within ~30 s and start polling."
 echo ""
 echo "Useful commands:"
