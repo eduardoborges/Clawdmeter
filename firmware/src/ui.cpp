@@ -706,38 +706,39 @@ static void build_today_workspace(lv_obj_t* tile) {
     lv_obj_center(today_empty);
 }
 
-// ---- Sessions workspace: one row per open Claude Code session, project name
-// on the left, state and minutes in it on the right.
+// ---- Sessions workspace: one row per open Claude Code session. A mark on the
+// left shows the state (a turning spinner while it works), then the project
+// and how long, and on a second line what it is doing. Rows are laid out in
+// ui_update_sessions, since done rows take one line and the others two.
+struct SessRow { lv_obj_t *mark, *name, *time, *doing, *rule; };
+static SessRow   sess[SESSION_ROWS];
+static char      sess_state[SESSION_ROWS];   // what each row shows, for sess_tick
 static lv_obj_t* sess_empty;
-static lv_obj_t* sess_name[SESSION_ROWS];
-static lv_obj_t* sess_state[SESSION_ROWS];
-static lv_obj_t* sess_rule[SESSION_ROWS];   // hairline under each row
+static int32_t   sess_mark_w;                // mark column, gap included
+
+static lv_obj_t* sess_label(lv_obj_t* tile, const lv_font_t* font) {
+    lv_obj_t* l = lv_label_create(tile);
+    lv_obj_set_style_text_font(l, font, 0);
+    lv_obj_add_flag(l, LV_OBJ_FLAG_HIDDEN);
+    return l;
+}
 
 static void build_sessions_workspace(lv_obj_t* tile) {
-    // Rows share the space between the header and the status line.
-    const lv_font_t* font = L.stat_value_font;
-    const int32_t line_h = lv_font_get_line_height(font);
-    const int32_t avail = L.scr_h + L.anim_y - lv_font_get_line_height(L.anim_font) - L.content_y;
-    const int32_t pitch = LV_MIN(line_h * 3 / 2, avail / SESSION_ROWS);
+    sess_mark_w = text_width(spinner_frames[1], L.anim_font) + L.margin / 2;
     for (int i = 0; i < SESSION_ROWS; i++) {
-        const int32_t y = L.content_y + i * pitch;
-        sess_name[i] = lv_label_create(tile);
-        lv_obj_set_style_text_font(sess_name[i], font, 0);
-        lv_obj_set_size(sess_name[i], L.content_w / 2, line_h);   // one line, so LONG_DOT truncates
-        lv_label_set_long_mode(sess_name[i], LV_LABEL_LONG_DOT);
-        lv_obj_set_pos(sess_name[i], L.margin, y);
-        sess_state[i] = lv_label_create(tile);
-        lv_obj_set_style_text_font(sess_state[i], font, 0);
-        lv_obj_align(sess_state[i], LV_ALIGN_TOP_RIGHT, -L.margin, y);
-        sess_rule[i] = lv_obj_create(tile);
-        lv_obj_remove_style_all(sess_rule[i]);
-        lv_obj_set_style_bg_color(sess_rule[i], COL_LINE, 0);
-        lv_obj_set_style_bg_opa(sess_rule[i], LV_OPA_COVER, 0);
-        lv_obj_set_size(sess_rule[i], L.content_w, 1);
-        lv_obj_set_pos(sess_rule[i], L.margin, y + (pitch + line_h) / 2);
-        lv_obj_add_flag(sess_name[i], LV_OBJ_FLAG_HIDDEN);
-        lv_obj_add_flag(sess_state[i], LV_OBJ_FLAG_HIDDEN);
-        lv_obj_add_flag(sess_rule[i], LV_OBJ_FLAG_HIDDEN);
+        SessRow& r = sess[i];
+        r.mark  = sess_label(tile, L.anim_font);
+        r.name  = sess_label(tile, L.stat_value_font);
+        lv_label_set_long_mode(r.name, LV_LABEL_LONG_DOT);
+        r.time  = sess_label(tile, L.stat_label_font);
+        lv_obj_set_style_text_color(r.time, COL_DIM, 0);
+        r.doing = sess_label(tile, L.stat_label_font);
+        r.rule  = lv_obj_create(tile);
+        lv_obj_remove_style_all(r.rule);
+        lv_obj_set_style_bg_color(r.rule, COL_LINE, 0);
+        lv_obj_set_style_bg_opa(r.rule, LV_OPA_COVER, 0);
+        lv_obj_set_size(r.rule, L.content_w, 1);
+        lv_obj_add_flag(r.rule, LV_OBJ_FLAG_HIDDEN);
     }
 
     sess_empty = lv_label_create(tile);
@@ -1113,12 +1114,29 @@ static void update_view_state(void) {
                       LV_OBJ_FLAG_HIDDEN);
 }
 
+// Turns the spinner on working rows and pulses the mark on rows that need you.
+// Runs on its own clock: the status line's spinner stops while an alert holds it.
+static void sess_tick(uint32_t now) {
+    static uint32_t last_ms;
+    static uint8_t  phase, frame;
+    if (ws_cur != WS_SESSIONS || now - last_ms < spinner_ms[frame]) return;
+    last_ms = now;
+    phase = (phase + 1) % SPINNER_PHASES;
+    frame = phase < SPINNER_COUNT ? phase : SPINNER_PHASES - phase;
+    for (int i = 0; i < SESSION_ROWS; i++) {
+        if (sess_state[i] == 'w') lv_label_set_text_static(sess[i].mark, spinner_frames[frame]);
+        else if (sess_state[i] == 'a')
+            lv_obj_set_style_opa(sess[i].mark, phase < SPINNER_PHASES / 2 ? LV_OPA_COVER : LV_OPA_30, 0);
+    }
+}
+
 void ui_tick_anim(void) {
     if (current_screen != SCREEN_USAGE) return;
     update_view_state();
     if (view_state == 1) splash_mini_tick();   // animate the creature on the waiting screen
 
     uint32_t now = lv_tick_get();
+    sess_tick(now);
 
     // Title clock: once the daemon has sent wall-clock time, replace "Usage" with
     // the live time, advanced locally so it ticks every minute between payloads.
@@ -1291,24 +1309,62 @@ void ui_update_stats(const StatsData* stats) {
 
 void ui_update_sessions(const SessionsData* sessions) {
     s_working = sessions->activity[0] != 0;
-    char buf[24];
     lv_obj_set_flag(sess_empty, LV_OBJ_FLAG_HIDDEN, sessions->rows > 0);
+    const int32_t name_h = lv_font_get_line_height(L.stat_value_font);
+    const int32_t sub_h  = lv_font_get_line_height(L.stat_label_font);
+    const int32_t mark_h = lv_font_get_line_height(L.anim_font);
+    const int32_t gap    = name_h / 2;
+    // Rows fill the space down to the status line; whatever doesn't fit is left
+    // out, and the daemon sends the ones that need you first.
+    const int32_t bottom = L.scr_h + L.anim_y - mark_h - gap;
+    const int32_t text_x = L.margin + sess_mark_w;
+    int32_t y = L.content_y;
+    int last = -1;
+    char buf[12];
     for (int i = 0; i < SESSION_ROWS; i++) {
-        const bool shown = i < sessions->rows;
-        lv_obj_set_flag(sess_name[i], LV_OBJ_FLAG_HIDDEN, !shown);
-        lv_obj_set_flag(sess_state[i], LV_OBJ_FLAG_HIDDEN, !shown);
-        lv_obj_set_flag(sess_rule[i], LV_OBJ_FLAG_HIDDEN, i + 1 >= sessions->rows);
-        if (!shown) continue;
+        SessRow& w = sess[i];
         const auto& r = sessions->row[i];
-        const char* state = r.state == 'a' ? "needs you" : r.state == 'w' ? "working" : "done";
-        const lv_color_t col = r.state == 'a' ? COL_ACCENT : r.state == 'w' ? COL_TEXT : COL_DIM;
-        if (r.mins == 0) snprintf(buf, sizeof(buf), "%s", state);
-        else if (r.mins < 60) snprintf(buf, sizeof(buf), "%s %um", state, r.mins);
-        else             snprintf(buf, sizeof(buf), "%s %uh", state, r.mins / 60);
-        lv_label_set_text(sess_name[i], r.name);
-        lv_label_set_text(sess_state[i], buf);
-        lv_obj_set_style_text_color(sess_name[i], r.state == 'd' ? COL_DIM : COL_TEXT, 0);
-        lv_obj_set_style_text_color(sess_state[i], col, 0);
+        // Small screens get one line per row.
+        const bool two = i < sessions->rows && r.doing[0] && L.scr_h >= 300;
+        const int32_t h = name_h + (two ? sub_h : 0);
+        const bool shown = i < sessions->rows && y + h <= bottom;
+        sess_state[i] = shown ? r.state : 0;
+        lv_obj_set_flag(w.mark, LV_OBJ_FLAG_HIDDEN, !shown);
+        lv_obj_set_flag(w.name, LV_OBJ_FLAG_HIDDEN, !shown);
+        lv_obj_set_flag(w.time, LV_OBJ_FLAG_HIDDEN, !shown);
+        lv_obj_set_flag(w.doing, LV_OBJ_FLAG_HIDDEN, !two || !shown);
+        lv_obj_add_flag(w.rule, LV_OBJ_FLAG_HIDDEN);
+        if (!shown) continue;
+        if (last >= 0) lv_obj_clear_flag(sess[last].rule, LV_OBJ_FLAG_HIDDEN);
+        last = i;
+
+        const bool done = r.state == 'd';
+        if (r.mins == 0)     snprintf(buf, sizeof(buf), "now");
+        else if (r.mins < 60) snprintf(buf, sizeof(buf), done ? "%um ago" : "%um", r.mins);
+        else                 snprintf(buf, sizeof(buf), done ? "%uh ago" : "%uh", r.mins / 60);
+        lv_label_set_text(w.time, buf);
+        const int32_t time_w = text_width(buf, L.stat_label_font);
+        // Same baseline as the name.
+        lv_obj_set_pos(w.time, L.margin + L.content_w - time_w,
+                       y + name_h - L.stat_value_font->base_line - sub_h + L.stat_label_font->base_line);
+
+        lv_label_set_text_static(w.mark, spinner_frames[done ? 0 : r.state == 'a' ? 3 : 1]);
+        lv_obj_set_style_text_color(w.mark, done ? COL_DIM : COL_ACCENT, 0);
+        lv_obj_set_style_opa(w.mark, LV_OPA_COVER, 0);
+        lv_obj_set_pos(w.mark, L.margin, y + (name_h - mark_h) / 2);
+
+        lv_label_set_text(w.name, r.name);
+        lv_obj_set_style_text_color(w.name, done ? COL_DIM : COL_TEXT, 0);
+        lv_obj_set_size(w.name, L.content_w - sess_mark_w - time_w - L.margin / 2, name_h);
+        lv_obj_set_pos(w.name, text_x, y);
+
+        if (two) {
+            lv_label_set_text_fmt(w.doing, r.state == 'w' ? "%s\xE2\x80\xA6" : "%s", r.doing);
+            lv_obj_set_style_text_color(w.doing, r.state == 'a' ? COL_ACCENT : COL_DIM, 0);
+            lv_obj_set_pos(w.doing, text_x, y + name_h);
+        }
+        lv_obj_set_pos(w.rule, L.margin, y + h + gap / 2);
+        y += h + gap;
     }
 }
 

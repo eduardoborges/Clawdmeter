@@ -140,6 +140,7 @@ static void parse_sessions(JsonDocument& doc) {
         strlcpy(r.name, v[0] | "", sizeof(r.name));
         r.state = (v[1] | "d")[0];
         r.mins = v[2] | 0;
+        strlcpy(r.doing, v[3] | "", sizeof(r.doing));
     }
     strlcpy(sessions.activity, doc["a"] | "", sizeof(sessions.activity));
     sessions.done_id = doc["dn"] | 0UL;
