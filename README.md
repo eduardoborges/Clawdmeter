@@ -11,7 +11,7 @@
 
 **[Screens](#screens)** · **[Install](#install)** · **[Hooks](#claude-code-hooks)** · **[Settings](#settings)** · **[Protocol](#ble-protocol)**
 
-> This started as a fork of [HermannBjorgvin/Clawdmeter](https://github.com/HermannBjorgvin/Clawdmeter), went by the same name, and split off before its v2. Upstream rewrote the host side as a Rust app. This one keeps the small daemons and puts the work into what the device shows. The two projects no longer share code or releases.
+> This started as a fork of [HermannBjorgvin/Clawdmeter](https://github.com/HermannBjorgvin/Clawdmeter), went by the same name, and split off before its v2. Upstream rewrote the host side as a Rust app. This one has a native Mac app, keeps the small daemons for Linux and Windows, and puts the work into what the device shows. The two projects no longer share code or releases.
 
 | Sessions | Usage | Today | Stats |
 | :-: | :-: | :-: | :-: |
@@ -76,19 +76,33 @@ You need the [PlatformIO CLI](https://docs.platformio.org/en/latest/core/install
 
 ### macOS
 
+Tally.app lives in the menu bar and does the daemon's job: it reads the token, polls usage and keeps the display fed over Bluetooth. Click its icon for usage, sessions and today's activity, or open Settings for the options below and for flashing the firmware.
+
+<img src="screenshots/mac-now.png" width="300" alt="The menu bar panel with usage, sessions and today's activity"> <img src="screenshots/mac-activity.png" width="300" alt="The Activity tab with the 26-week heatmap">
+
+Build it from the repo with Xcode's command line tools:
+
 ```sh
-./flash-mac.sh waveshare_amoled_216   # finds /dev/cu.usbmodem* on its own
-./install-mac.sh
+mac/build.sh                          # builds and signs mac/build/Tally.app
+cp -R mac/build/Tally.app /Applications/
+open /Applications/Tally.app
 ```
 
-Then open System Settings → Bluetooth and click Connect next to "Tally". The daemon only talks to the device this Mac is connected to, and picks it up within a minute.
+Pair the display once in System Settings → Bluetooth (Connect next to "Tally"). macOS asks for Bluetooth permission on the first launch. Then turn on Open Tally at login in Settings. The token comes from the Keychain entry Claude Code already keeps.
 
-`install-mac.sh` creates a venv with `bleak` and `httpx`, asks about the clock, the chime and the alert beep, and loads a LaunchAgent. macOS asks for Bluetooth permission on the first run. The token comes from the Keychain entry Claude Code already keeps.
+To flash the firmware, plug the display in over USB, open Settings → Firmware, pick the board and flash a zip from `tools/package_firmware.py` (or the latest release, once there is one). Flashing keeps the Bluetooth pairing and the display's settings. It needs esptool, from `brew install esptool` or PlatformIO.
+
+The app logs to `~/Library/Logs/Tally.log`.
+
+#### The Python daemon instead
+
+The Python daemon still works and runs from a LaunchAgent. Don't run it next to the app: both would write to the display.
 
 ```sh
-tail -F ~/Library/Logs/claude-usage-daemon.out.log                           # logs
-launchctl unload ~/Library/LaunchAgents/com.user.claude-usage-daemon.plist   # stop
-launchctl load -w ~/Library/LaunchAgents/com.user.claude-usage-daemon.plist  # start
+./flash-mac.sh waveshare_amoled_216   # finds /dev/cu.usbmodem* on its own
+./install-mac.sh                      # venv with bleak and httpx, a LaunchAgent, a few questions
+tail -F ~/Library/Logs/claude-usage-daemon.out.log
+launchctl unload -w ~/Library/LaunchAgents/com.user.claude-usage-daemon.plist   # stop for good
 ```
 
 ### Linux
@@ -172,6 +186,8 @@ The daemon reads `~/.config/claude-usage-monitor/config` on every poll, so edits
 | `config_dirs` | `~/.claude` | Several Claude config folders, comma separated. The device shows the one in use |
 | `poll_interval` | `60` | Seconds between usage checks. Linux only, macOS polls every minute |
 | `heartbeat_interval` | `60` | Seconds between replays of the last reading. Linux only |
+| `menubar_usage` | `on` | Show the 5-hour usage next to the menu bar icon. Mac app only |
+| `board` | `waveshare_amoled_216` | The board the Mac app's Firmware settings flash. Mac app only |
 
 The chime and the beep play on boards with a speaker: the S3 AMOLED-2.16 and 1.8, and the LCD-1.54.
 
@@ -230,6 +246,8 @@ Messages with `k` feed the other workspaces:
 The firmware announces `"stats":1` in its TX value, and the daemons skip the `k` messages when it's missing.
 
 ## Development
+
+The Mac app is a SwiftPM package in `mac/`: `swift test` runs its tests, `Tally --render out.png` draws the panel with made-up data, and `Tally --dump ss` prints a message the way the daemon would send it.
 
 The simulator runs the whole firmware in an SDL window and plays daemon messages from `firmware/sim/scenario.jsonl`, so most UI work happens without the board:
 
