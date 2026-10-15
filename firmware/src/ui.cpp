@@ -95,7 +95,7 @@ static void compute_layout(const BoardCaps& c) {
     L.pill_pad_x = 12;
     L.pill_pad_y = 4;
     L.radius = 16;
-    L.title_font   = &font_sans_56;
+    L.title_font   = &font_sans_34;
     L.pct_font     = &font_sans_56;
     L.ent_pct_font = &font_sans_56;
     L.pill_font    = &font_sans_semibold_20;
@@ -167,7 +167,7 @@ static void compute_layout(const BoardCaps& c) {
         L.pill_pad_x = 8;
         L.pill_pad_y = 2;
         L.radius = 8;
-        L.title_font   = &font_sans_34;
+        L.title_font   = &font_sans_20;
         L.pct_font     = &font_sans_24;
         L.ent_pct_font = &font_sans_34;
         L.pill_font    = &font_sans_semibold_14;
@@ -897,8 +897,11 @@ static void init_usage_screen(lv_obj_t* scr) {
     lv_obj_set_style_text_font(lbl_title, L.title_font, 0);
     lv_obj_set_style_text_color(lbl_title, COL_TEXT, 0);
     // The nudge balances the corner logo on the left; smaller on small
-    // screens where the logo is 40px and the battery icon sits closer.
-    lv_obj_align(lbl_title, LV_ALIGN_TOP_MID, L.title_nudge, L.title_y);
+    // screens where the logo is 40px and the battery icon sits closer. The
+    // title is centered on the battery icon's height.
+    const int32_t batt_h = L.small_icons ? ICON_BATTERY_SMALL_H : ICON_BATTERY_H;
+    lv_obj_align(lbl_title, LV_ALIGN_TOP_MID, L.title_nudge,
+                 L.batt_y + (batt_h - lv_font_get_line_height(L.title_font)) / 2);
 
     // Usage panels (shown when connected) live in a transparent full-size group
     // so they can be toggled against the pairing hint as one unit.
