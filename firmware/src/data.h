@@ -50,7 +50,7 @@ struct TodayData {
 // sessions, the ones that need you first.
 struct SessionsData {
     struct {
-        char name[13];       // project folder, ASCII
+        char name[41];       // "project | title", ASCII
         char state;          // 'a' needs you, 'w' working, 'd' done
         uint16_t mins;       // minutes since the task started (working) or the last event
         char doing[17];      // second line: what it is doing, "" for done
