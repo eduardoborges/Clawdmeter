@@ -24,15 +24,35 @@ struct TallyApp: App {
         MenuBarExtra {
             MenuPanel()
         } label: {
-            Image(systemName: "gauge.with.dots.needle.33percent")
+            MenuBarLabel()
         }
         .menuBarExtraStyle(.window)
+
+        Settings { SettingsView() }
+    }
+}
+
+/// Whether the menu bar shows the 5-hour usage next to the icon.
+@MainActor let menuBarUsage = Setting("menubar_usage", allowed: ["off", "on"], default: "on")
+
+private struct MenuBarLabel: View {
+    var body: some View {
+        HStack(spacing: 3) {
+            Image(systemName: "gauge.with.dots.needle.33percent")
+            if menuBarUsage.isOn, let usage = dashboard.usage { Text("\(usage.session)%").monospacedDigit() }
+        }
     }
 }
 
 private struct MenuPanel: View {
+    @Environment(\.openSettings) private var openSettings
+
     var body: some View {
         PopoverView(dashboard: dashboard, linkStatus: link.status, connected: link.isReady,
+                    onSettings: {
+                        NSApp.activate(ignoringOtherApps: true)   // a menu bar app's windows open behind others
+                        openSettings()
+                    },
                     onQuit: { NSApplication.shared.terminate(nil) })
     }
 }

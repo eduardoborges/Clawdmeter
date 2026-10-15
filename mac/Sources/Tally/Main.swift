@@ -1,4 +1,5 @@
 import AppKit
+import ServiceManagement
 import SwiftUI
 import TallyCore
 
@@ -29,6 +30,19 @@ enum Main {
             }
             return
         }
+        // `--login on|off` sets Open at Login for this copy of the app; with no
+        // value it prints the current state.
+        if let i = args.firstIndex(of: "--login") {
+            do {
+                if i + 1 < args.count {
+                    try args[i + 1] == "on" ? SMAppService.mainApp.register() : SMAppService.mainApp.unregister()
+                }
+                print(SMAppService.mainApp.status == .enabled ? "on" : "off (\(SMAppService.mainApp.status.rawValue))")
+            } catch {
+                print("failed: \(error.localizedDescription)")
+            }
+            return
+        }
         // `--flash <zip> [--port <port>]` flashes a board without the window.
         if let i = args.firstIndex(of: "--flash"), i + 1 < args.count {
             let zip = URL(fileURLWithPath: args[i + 1])
@@ -50,8 +64,12 @@ enum Main {
         // design without clicking the menu bar.
         if let i = args.firstIndex(of: "--render"), i + 1 < args.count {
             let what = i + 2 < args.count ? args[i + 2] : "now"
-            render(PopoverView(dashboard: .sample, linkStatus: "Connected", connected: true, onSettings: {},
-                               tab: what == "activity" ? .activity : .now), to: args[i + 1])
+            if what.hasPrefix("settings-") {
+                render(SettingsView(tab: String(what.dropFirst("settings-".count))), to: args[i + 1])
+            } else {
+                render(PopoverView(dashboard: .sample, linkStatus: "Connected", connected: true, onSettings: {},
+                                   tab: what == "activity" ? .activity : .now), to: args[i + 1])
+            }
             return
         }
         TallyApp.main()
