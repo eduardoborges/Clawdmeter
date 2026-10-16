@@ -1,8 +1,11 @@
 #!/bin/sh
-# Builds mac/build/Tally.app and signs it. macOS ties the Bluetooth
-# permission to the signature, so sign with a real identity (SIGN_ID, or the
-# first valid "Apple Development" certificate) or it asks again after every
-# build. Without one, the app is signed ad hoc.
+# Builds mac/build/Tally.app, plus mac/build/Tally.dmg with --dmg. The version
+# comes from version.txt.
+# SIGN_IDENTITY signs for distribution (Developer ID, hardened runtime), and
+# NOTARY_KEY_ID, NOTARY_ISSUER_ID and NOTARY_KEY_P8 add notarization.
+# Otherwise it signs with SIGN_ID or the first valid "Apple Development"
+# certificate, because macOS ties the Bluetooth permission to the signature
+# and asks again whenever it changes. With no identity it signs ad hoc.
 set -e
 : "${SIGN_ID:=$(security find-identity -v -p codesigning \
   | awk '/Apple Development/ && !/REVOKED/ { print $2; exit }')}"
@@ -13,5 +16,32 @@ rm -rf "$app"
 mkdir -p "$app/Contents/MacOS"
 cp "$(swift build -c release --show-bin-path)/Tally" "$app/Contents/MacOS/"
 cp Info.plist "$app/Contents/"
-codesign --force --sign "${SIGN_ID:--}" "$app"
+version=$(cat ../version.txt)
+plutil -replace CFBundleShortVersionString -string "$version" "$app/Contents/Info.plist"
+plutil -replace CFBundleVersion -string "$version" "$app/Contents/Info.plist"
+
+if [ -n "$SIGN_IDENTITY" ]; then
+  codesign --force --options runtime --timestamp --sign "$SIGN_IDENTITY" "$app"
+else
+  codesign --force --sign "${SIGN_ID:--}" "$app"
+fi
+
+if [ -n "$SIGN_IDENTITY" ] && [ -n "$NOTARY_KEY_ID" ]; then
+  key=$(mktemp)
+  trap 'rm -f "$key"' EXIT
+  printf '%s' "$NOTARY_KEY_P8" > "$key"
+  ditto -c -k --keepParent "$app" build/notarize.zip
+  xcrun notarytool submit build/notarize.zip --key "$key" --key-id "$NOTARY_KEY_ID" \
+    --issuer "$NOTARY_ISSUER_ID" --wait
+  xcrun stapler staple "$app"
+  rm build/notarize.zip
+fi
+
+if [ "$1" = --dmg ]; then
+  stage=$(mktemp -d)
+  cp -R "$app" "$stage/"
+  ln -s /Applications "$stage/Applications"
+  hdiutil create -volname Tally -srcfolder "$stage" -ov -format UDZO build/Tally.dmg
+  rm -rf "$stage"
+fi
 echo "$app"
