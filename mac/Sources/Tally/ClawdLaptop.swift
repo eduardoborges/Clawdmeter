@@ -1,7 +1,10 @@
-// Clawd typing on a laptop: frames 17 to 34 of
-// research/clawd-official/Clawd-Laptop.lottie.json (the typing loop), one pixel
-// per art cell, played at 12 fps. They are alpha masks for a template image,
-// with the eyes cut out as holes.
+// Clawd from research/clawd-official/Clawd-Laptop.lottie.json, one pixel per
+// art cell, as alpha masks for a template image with the eyes cut out as holes.
+
+// Standing still (frame 0), shown at rest.
+let clawdIdlePNG = "iVBORw0KGgoAAAANSUhEUgAAABgAAAAQCAYAAAAMJL+VAAAAV0lEQVQ4y2P8z/CfARkwMjCiCpAI/jP8Z0TmM1FiGDEAnwWMUEwI4FVHcx8wMjAwUBTmhMCAxsHQsIBxWOeDoWEBCy4JWFjC4gQ9bNHFccXd0A8imlsAANgoFB+SLBwAAAAAAElFTkSuQmCC"
+
+// Typing on the laptop (frames 17 to 34, the typing loop), played at 12 fps.
 let clawdLaptopFramePNGs: [String] = [
     "iVBORw0KGgoAAAANSUhEUgAAABwAAAAOCAYAAAA8E3wEAAAAdklEQVQ4y9VUWwrAMAhLRu9/5exLKEKmrF1hfppIfKSlIBAUFkIQu9xrRehNHBccBR6rUoH/d8LKTIG3J60EWzG7vHLs9pU+PTGCOnbDaOSIYIgJ4ueCsxiQTBPJTHLFjuf4ADDykd3RK56ry80MB7iuHa/7gd+ZPDMnyXN5jAAAAABJRU5ErkJggg==",
     "iVBORw0KGgoAAAANSUhEUgAAABwAAAAOCAYAAAA8E3wEAAAAeklEQVQ4y91UWw7AIAijxvtfuftYSBgRIbqYbHwZKbY8BBQKBJQNoxBVbNshWrHjhD3xa6mY+L+bYTZMvNOEuZgP0P+H5ighBMx6WLLKx9fl8gqh31RegPopRB8BLSAKHBHNxGhM80HRI1XcjOxRUp9N1JcIZwXYs8dfK9ozKHHENTUAAAAASUVORK5CYII=",

@@ -1,9 +1,9 @@
 import AppKit
 import Observation
 
-/// The menu bar icon, drawn by the system in white or black. At rest it is
-/// Claude's spark; while any session works it is Clawd typing on a laptop, held
-/// still when Reduce Motion is on.
+/// The menu bar icon, drawn by the system in white or black: Clawd standing
+/// still at rest, and typing on a laptop while any session works (held still
+/// when Reduce Motion is on).
 @MainActor
 @Observable
 final class MenuBarIcon {
@@ -19,8 +19,8 @@ final class MenuBarIcon {
 
     private init() {
         let decode = { (png: String) in Data(base64Encoded: png).flatMap(NSImage.init(data:)) }
-        rest = Self.icon(decode(claudeLogoPNG), size: NSSize(width: 18, height: 18))
-        frames = clawdLaptopFramePNGs.compactMap(decode).map { Self.icon($0, size: Self.pixelSize($0), sharp: true) }
+        rest = decode(clawdIdlePNG).map(Self.icon) ?? NSImage()
+        frames = clawdLaptopFramePNGs.compactMap(decode).map(Self.icon)
         image = rest
     }
 
@@ -52,17 +52,14 @@ final class MenuBarIcon {
     /// put when it switches.
     static let canvas = NSSize(width: 28, height: 18)
 
-    private static func pixelSize(_ image: NSImage) -> NSSize {
-        image.representations.first.map { NSSize(width: $0.pixelsWide, height: $0.pixelsHigh) } ?? image.size
-    }
-
-    /// A template the system draws white or black to match the menu bar, with the
-    /// mask centered on the canvas. Pixel art is scaled without smoothing.
-    private static func icon(_ mask: NSImage?, size: NSSize, sharp: Bool = false) -> NSImage {
+    /// A template the system draws white or black to match the menu bar: one
+    /// point per pixel without smoothing, centered horizontally and standing on a
+    /// shared baseline so Clawd doesn't hop between poses.
+    private static func icon(_ mask: NSImage) -> NSImage {
+        let size = mask.representations.first.map { NSSize(width: $0.pixelsWide, height: $0.pixelsHigh) } ?? mask.size
         let image = NSImage(size: canvas, flipped: false) { rect in
-            if sharp { NSGraphicsContext.current?.imageInterpolation = .none }
-            mask?.draw(in: NSRect(x: ((rect.width - size.width) / 2).rounded(), y: ((rect.height - size.height) / 2).rounded(),
-                                  width: size.width, height: size.height))
+            NSGraphicsContext.current?.imageInterpolation = .none
+            mask.draw(in: NSRect(x: ((rect.width - size.width) / 2).rounded(), y: 1, width: size.width, height: size.height))
             return true
         }
         image.isTemplate = true
