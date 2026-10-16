@@ -46,6 +46,7 @@ private struct MenuBarLabel: View {
 
 private struct MenuPanel: View {
     @Environment(\.openSettings) private var openSettings
+    @State private var height: CGFloat = 0
 
     var body: some View {
         PopoverView(dashboard: dashboard, linkStatus: link.status, connected: link.isReady,
@@ -55,5 +56,29 @@ private struct MenuPanel: View {
                     },
                     onQuit: { NSApplication.shared.terminate(nil) })
             .preferredColorScheme(.dark)   // dark glass, so the display's light text stays readable
+            .fixedSize(horizontal: false, vertical: true)
+            .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { height = $0 }
+            .background(FitWindow(height: height))
+    }
+}
+
+/// The menu bar window grows with its content but never shrinks, so a shorter
+/// tab would sit centered in empty space. This fits the window to the content
+/// and keeps its top edge under the menu bar.
+private struct FitWindow: NSViewRepresentable {
+    let height: CGFloat
+
+    func makeNSView(context: Context) -> NSView { NSView() }
+
+    func updateNSView(_ view: NSView, context: Context) {
+        DispatchQueue.main.async {
+            guard let window = view.window, height > 0 else { return }
+            let content = window.contentRect(forFrameRect: window.frame)
+            guard abs(content.height - height) > 0.5 else { return }
+            var frame = window.frameRect(forContentRect: NSRect(x: content.minX, y: content.maxY - height,
+                                                                width: content.width, height: height))
+            frame.origin.y = window.frame.maxY - frame.height
+            window.setFrame(frame, display: true)
+        }
     }
 }
