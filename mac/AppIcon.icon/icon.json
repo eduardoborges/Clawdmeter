@@ -1,0 +1,22 @@
+{
+  "fill": {
+    "linear-gradient": [
+      "srgb:0.16471,0.16078,0.14902,1.00000",
+      "srgb:0.07843,0.07843,0.07451,1.00000"
+    ]
+  },
+  "groups": [
+    {
+      "layers": [
+        {
+          "image-name": "clawd.svg",
+          "name": "clawd",
+          "glass": true
+        }
+      ]
+    }
+  ],
+  "supported-platforms": {
+    "squares": "shared"
+  }
+}
