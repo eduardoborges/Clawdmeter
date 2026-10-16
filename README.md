@@ -133,7 +133,7 @@ Hold the power button for 3 seconds and let go. The device forgets its bond and 
 
 ## Claude Code hooks
 
-Sessions, alerts, the corner Clawd and the celebrations all come from Claude Code hooks. Merge these into `~/.claude/settings.json` and point the path at your checkout. The script needs `jq` (recent macOS ships it; otherwise `brew install jq` or `sudo apt install jq`).
+Sessions, alerts, the corner Clawd and the celebrations all come from Claude Code hooks. Tally.app installs them from the welcome guide or Settings → Hooks: it replaces any `attention-hook.sh` entries with its own, leaves your other hooks alone and backs up the file to `~/.config/claude-usage-monitor/claude-settings.backup.json`. The script needs `jq`, which the Homebrew cask pulls in. Without the app (Linux, Windows), merge these into `~/.claude/settings.json` and point the path at your checkout (`brew install jq` or `sudo apt install jq` if it's missing).
 
 ```json
 {

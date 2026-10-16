@@ -13,8 +13,9 @@ cd "$(dirname "$0")"
 swift build -c release --product Tally
 app=build/Tally.app
 rm -rf "$app"
-mkdir -p "$app/Contents/MacOS"
+mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources"
 cp "$(swift build -c release --show-bin-path)/Tally" "$app/Contents/MacOS/"
+cp ../daemon/attention-hook.sh "$app/Contents/Resources/"
 cp Info.plist "$app/Contents/"
 version=$(cat ../version.txt)
 plutil -replace CFBundleShortVersionString -string "$version" "$app/Contents/Info.plist"

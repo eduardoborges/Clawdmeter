@@ -10,6 +10,7 @@ struct WelcomeView: View {
     let onDone: () -> Void
     @State private var step: Int
     @State private var flasher = Flasher()
+    @State private var hooks = HookInstaller()
     @AppStorage("welcomed") private var welcomed = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -28,6 +29,7 @@ struct WelcomeView: View {
                 case 0: welcome
                 case 1: flash
                 case 2: pair
+                case 3: hookStep
                 default: allSet
                 }
             }
@@ -37,7 +39,7 @@ struct WelcomeView: View {
             .id(step)
             Spacer()
             HStack(spacing: 8) {
-                ForEach(0..<4, id: \.self) { i in
+                ForEach(0..<5, id: \.self) { i in
                     Capsule().fill(i == step ? Theme.accent : Theme.line).frame(width: i == step ? 24 : 8, height: 8)
                 }
             }
@@ -127,19 +129,32 @@ struct WelcomeView: View {
         }
     }
 
+    private var hookStep: some View {
+        VStack(spacing: 20) {
+            symbol("point.3.connected.trianglepath.dotted")
+            header("Claude Code hooks",
+                   "Sessions, alerts and the corner Clawd come from Claude Code hooks. Tally adds them to ~/.claude/settings.json and keeps a backup of the old file.")
+            if hooks.current {
+                Label("Hooks installed", systemImage: "checkmark.circle.fill").foregroundStyle(.green)
+            } else if let error = hooks.error {
+                Text(error).font(.callout).foregroundStyle(Theme.alert)
+            }
+            HStack(spacing: 12) {
+                if hooks.current || hooks.script == nil {
+                    Button("Continue") { step += 1 }.primary()
+                } else {
+                    Button("Skip") { step += 1 }.secondary()
+                    Button("Install Hooks") { hooks.install() }.primary()
+                }
+            }
+        }
+    }
+
     private var allSet: some View {
         VStack(spacing: 20) {
             symbol("checkmark.circle")
             header("All set", "Click Clawd in the menu bar for usage, sessions and today's activity. Settings has the rest.")
             OpenAtLoginToggle()
-            if Hooks.installed().isEmpty {
-                HStack(spacing: 6) {
-                    Text("Sessions and alerts come from Claude Code hooks.").foregroundStyle(Theme.dim)
-                    Link("Set up hooks", destination: URL(string: "https://github.com/eduardoborges/tally#claude-code-hooks")!)
-                        .tint(Theme.accent)
-                }
-                .font(.callout)
-            }
             Button("Done", action: onDone).primary()
         }
     }

@@ -141,16 +141,55 @@ private struct DisplaySettings: View {
     }
 }
 
+/// Installs the hooks from the copy of attention-hook.sh inside the app.
+@MainActor
+@Observable
+final class HookInstaller {
+    /// The copy inside the app, nil for a bare `swift build`.
+    let script = Bundle.main.path(forResource: "attention-hook", ofType: "sh")
+    private(set) var installed = Hooks.installed()
+    private(set) var current = false
+    private(set) var error: String?
+
+    init() { refresh() }
+
+    func refresh() {
+        installed = Hooks.installed()
+        current = script.map { Hooks.current(script: $0) } ?? false
+    }
+
+    func install() {
+        guard let script else { return }
+        do {
+            try Hooks.install(script: script)
+            error = nil
+        } catch {
+            self.error = error.localizedDescription
+        }
+        refresh()
+    }
+}
+
 private struct HookSettings: View {
-    @State private var installed = Hooks.installed()
+    @State private var hooks = HookInstaller()
 
     var body: some View {
         Form {
+            if !hooks.current && hooks.script != nil {
+                Section {
+                    HStack {
+                        Note("Tally adds its hooks to ~/.claude/settings.json and backs the file up to ~/.config/claude-usage-monitor first.")
+                        Button(hooks.installed.isEmpty ? "Install Hooks" : "Update Hooks") { hooks.install() }
+                            .glassPrimaryAction()
+                    }
+                    if let error = hooks.error { Text(error).foregroundStyle(.red) }
+                }
+            }
             Section {
                 ForEach(Hooks.events, id: \.event) { hook in
                     HStack {
-                        Image(systemName: installed.contains(hook.event) ? "checkmark.circle.fill" : "circle.dashed")
-                            .foregroundStyle(installed.contains(hook.event) ? Color.green : Color.secondary)
+                        Image(systemName: hooks.installed.contains(hook.event) ? "checkmark.circle.fill" : "circle.dashed")
+                            .foregroundStyle(hooks.installed.contains(hook.event) ? Color.green : Color.secondary)
                         VStack(alignment: .leading) {
                             Text(hook.event)
                             Text(hook.feeds).font(.caption).foregroundStyle(.secondary)
@@ -160,15 +199,11 @@ private struct HookSettings: View {
             } header: {
                 Text("Claude Code hooks")
             } footer: {
-                HStack {
-                    Note("Read from ~/.claude/settings.json. Tally doesn't change it.")
-                    Spacer()
-                    Link("Setup guide", destination: URL(string: "https://github.com/eduardoborges/tally#claude-code-hooks")!)
-                }
+                Note("Claude Code picks up hook changes without a restart.")
             }
         }
         .formStyle(.grouped)
-        .onAppear { installed = Hooks.installed() }
+        .onAppear { hooks.refresh() }
     }
 }
 
