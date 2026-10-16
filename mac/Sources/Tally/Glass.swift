@@ -35,12 +35,11 @@ extension View {
     }
 }
 
-/// Two tabs. On macOS 26 the selection is a terracotta glass capsule that
-/// slides between them; before, an underline.
+/// Two tabs. The selection is a terracotta glass capsule on macOS 26 and an
+/// underline before it.
 struct GlassTabs<Tab: Hashable & RawRepresentable>: View where Tab.RawValue == String {
     let tabs: [Tab]
     @Binding var selection: Tab
-    @Namespace private var glass
 
     var body: some View {
         bar.focusEffectDisabled()   // the panel opens with the first tab focused, so hide the focus ring
@@ -51,7 +50,7 @@ struct GlassTabs<Tab: Hashable & RawRepresentable>: View where Tab.RawValue == S
             GlassEffectContainer(spacing: 6) {
                 HStack(spacing: 4) {
                     ForEach(tabs, id: \.self) { tab in
-                        Button { withAnimation(.smooth(duration: 0.3)) { selection = tab } } label: {
+                        Button { selection = tab } label: {
                             Text(tab.rawValue)
                                 .font(.system(size: 12, weight: .medium))
                                 .padding(.horizontal, 14).padding(.vertical, 5)
@@ -61,7 +60,6 @@ struct GlassTabs<Tab: Hashable & RawRepresentable>: View where Tab.RawValue == S
                         .foregroundStyle(selection == tab ? Theme.text : Theme.dim)
                         .glassEffect(selection == tab ? .regular.tint(Theme.accent.opacity(0.45)).interactive() : .identity,
                                      in: .capsule)
-                        .glassEffectID(tab, in: glass)
                     }
                 }
             }
