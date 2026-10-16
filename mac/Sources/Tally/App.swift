@@ -38,7 +38,7 @@ struct TallyApp: App {
 private struct MenuBarLabel: View {
     var body: some View {
         HStack(spacing: 3) {
-            Image(systemName: "gauge.with.dots.needle.33percent")
+            Image(nsImage: MenuBarIcon.shared.image)
             if menuBarUsage.isOn, let usage = dashboard.usage { Text("\(usage.session)%").monospacedDigit() }
         }
     }

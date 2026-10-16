@@ -134,6 +134,7 @@ final class Daemon {
 
         let sessions = Sessions.snapshot()
         dashboard.sessions = sessions.sessions
+        MenuBarIcon.shared.setWorking(sessions.sessions.contains { $0.state == "w" })
 
         // Today: scanning the transcripts takes a moment, so check once a
         // minute, off the main thread, and only when something changed.
