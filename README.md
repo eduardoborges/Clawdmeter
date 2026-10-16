@@ -1,9 +1,10 @@
 <div align="center">
   <img src="assets/readme/waving.gif" width="96" alt="">
-  <h1>Tally</h1>
+  <h1>Claudio</h1>
   <p>A desk display for <strong>Claude Code</strong>. Usage limits, every open session and what it's doing, today's activity and six months of history, on a small AMOLED next to the keyboard.</p>
+  <p><sub>Claudio is a common Brazilian name, and a joke on Claude.</sub></p>
 
-  [![last commit](https://img.shields.io/github/last-commit/eduardoborges/tally)](https://github.com/eduardoborges/tally/commits/main)
+  [![last commit](https://img.shields.io/github/last-commit/eduardoborges/claudio)](https://github.com/eduardoborges/claudio/commits/main)
   [![board](https://img.shields.io/badge/board-ESP32--S3%20AMOLED%202.16-D97757)](#hardware)
 </div>
 
@@ -76,29 +77,29 @@ You need the [PlatformIO CLI](https://docs.platformio.org/en/latest/core/install
 
 ### macOS
 
-Tally.app lives in the menu bar and does the daemon's job: it reads the token, polls usage and keeps the display fed over Bluetooth. Click its icon for usage, sessions and today's activity, or open Settings for the options below and for flashing the firmware.
+Claudio.app lives in the menu bar and does the daemon's job: it reads the token, polls usage and keeps the display fed over Bluetooth. Click its icon for usage, sessions and today's activity, or open Settings for the options below and for flashing the firmware.
 
 <img src="screenshots/mac-now.png" width="300" alt="The menu bar panel with usage, sessions and today's activity"> <img src="screenshots/mac-activity.png" width="300" alt="The Activity tab with the 26-week heatmap">
 
 Install it with Homebrew:
 
 ```sh
-brew install --cask eduardoborges/tap/tally
+brew install --cask eduardoborges/tap/claudio
 ```
 
 Or build it from the repo with Xcode's command line tools:
 
 ```sh
-mac/build.sh                          # builds and signs mac/build/Tally.app
-cp -R mac/build/Tally.app /Applications/
-open /Applications/Tally.app
+mac/build.sh                          # builds and signs mac/build/Claudio.app
+cp -R mac/build/Claudio.app /Applications/
+open /Applications/Claudio.app
 ```
 
-Pair the display once in System Settings → Bluetooth (Connect next to "Tally"). macOS asks for Bluetooth permission on the first launch. Then turn on Open Tally at login in Settings. The token comes from the Keychain entry Claude Code already keeps.
+Pair the display once in System Settings → Bluetooth (Connect next to "Claudio"). macOS asks for Bluetooth permission on the first launch. Then turn on Open Claudio at login in Settings. The token comes from the Keychain entry Claude Code already keeps.
 
 To flash the firmware, plug the display in over USB, open Settings → Firmware, pick the board and flash the latest release or a zip from `tools/package_firmware.py`. Flashing keeps the Bluetooth pairing and the display's settings. It needs esptool, from `brew install esptool` or PlatformIO.
 
-The app logs to `~/Library/Logs/Tally.log`.
+The app logs to `~/Library/Logs/Claudio.log`.
 
 #### The Python daemon instead
 
@@ -115,7 +116,7 @@ launchctl unload -w ~/Library/LaunchAgents/com.user.claude-usage-daemon.plist   
 
 ```sh
 ./flash.sh waveshare_amoled_216      # defaults to /dev/ttyACM0
-bluetoothctl scan le                 # wait for "Tally"
+bluetoothctl scan le                 # wait for "Claudio"
 bluetoothctl pair <MAC> && bluetoothctl trust <MAC>
 ./install.sh
 systemctl --user start claude-usage-daemon
@@ -133,36 +134,36 @@ Hold the power button for 3 seconds and let go. The device forgets its bond and 
 
 ## Claude Code hooks
 
-Sessions, alerts, the corner Clawd and the celebrations all come from Claude Code hooks. Tally.app installs them from the welcome guide or Settings → Hooks: it replaces any `attention-hook.sh` entries with its own, leaves your other hooks alone and backs up the file to `~/.config/claude-usage-monitor/claude-settings.backup.json`. The script needs `jq`, which the Homebrew cask pulls in. Without the app (Linux, Windows), merge these into `~/.claude/settings.json` and point the path at your checkout (`brew install jq` or `sudo apt install jq` if it's missing).
+Sessions, alerts, the corner Clawd and the celebrations all come from Claude Code hooks. Claudio.app installs them from the welcome guide or Settings → Hooks: it replaces any `attention-hook.sh` entries with its own, leaves your other hooks alone and backs up the file to `~/.config/claude-usage-monitor/claude-settings.backup.json`. The script needs `jq`, which the Homebrew cask pulls in. Without the app (Linux, Windows), merge these into `~/.claude/settings.json` and point the path at your checkout (`brew install jq` or `sudo apt install jq` if it's missing).
 
 ```json
 {
   "hooks": {
     "Notification": [
       { "matcher": "permission_prompt|elicitation_dialog",
-        "hooks": [{ "type": "command", "command": "/path/to/tally/daemon/attention-hook.sh alert" }] }
+        "hooks": [{ "type": "command", "command": "/path/to/claudio/daemon/attention-hook.sh alert" }] }
     ],
     "PreToolUse": [
       { "matcher": "AskUserQuestion",
-        "hooks": [{ "type": "command", "command": "/path/to/tally/daemon/attention-hook.sh alert" }] },
+        "hooks": [{ "type": "command", "command": "/path/to/claudio/daemon/attention-hook.sh alert" }] },
       { "matcher": "*",
-        "hooks": [{ "type": "command", "command": "/path/to/tally/daemon/attention-hook.sh tool" }] }
+        "hooks": [{ "type": "command", "command": "/path/to/claudio/daemon/attention-hook.sh tool" }] }
     ],
     "UserPromptSubmit": [
-      { "hooks": [{ "type": "command", "command": "/path/to/tally/daemon/attention-hook.sh clear" }] }
+      { "hooks": [{ "type": "command", "command": "/path/to/claudio/daemon/attention-hook.sh clear" }] }
     ],
     "PostToolUse": [
       { "matcher": "*",
-        "hooks": [{ "type": "command", "command": "/path/to/tally/daemon/attention-hook.sh clear" }] }
+        "hooks": [{ "type": "command", "command": "/path/to/claudio/daemon/attention-hook.sh clear" }] }
     ],
     "Stop": [
-      { "hooks": [{ "type": "command", "command": "/path/to/tally/daemon/attention-hook.sh stop" }] }
+      { "hooks": [{ "type": "command", "command": "/path/to/claudio/daemon/attention-hook.sh stop" }] }
     ],
     "SubagentStop": [
-      { "hooks": [{ "type": "command", "command": "/path/to/tally/daemon/attention-hook.sh subagent" }] }
+      { "hooks": [{ "type": "command", "command": "/path/to/claudio/daemon/attention-hook.sh subagent" }] }
     ],
     "SessionEnd": [
-      { "hooks": [{ "type": "command", "command": "/path/to/tally/daemon/attention-hook.sh end" }] }
+      { "hooks": [{ "type": "command", "command": "/path/to/claudio/daemon/attention-hook.sh end" }] }
     ]
   }
 }
@@ -253,7 +254,7 @@ The firmware announces `"stats":1` in its TX value, and the daemons skip the `k`
 
 ## Development
 
-The Mac app is a SwiftPM package in `mac/`: `swift test` runs its tests, `Tally --render out.png` draws the panel with made-up data, and `Tally --dump ss` prints a message the way the daemon would send it.
+The Mac app is a SwiftPM package in `mac/`: `swift test` runs its tests, `Claudio --render out.png` draws the panel with made-up data, and `Claudio --dump ss` prints a message the way the daemon would send it.
 
 The simulator runs the whole firmware in an SDL window and plays daemon messages from `firmware/sim/scenario.jsonl`, so most UI work happens without the board:
 

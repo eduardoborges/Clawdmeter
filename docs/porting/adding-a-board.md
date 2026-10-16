@@ -1,4 +1,4 @@
-# Porting Tally to a new board
+# Porting Claudio to a new board
 
 A board port is a folder under `firmware/src/boards/` plus a new
 `[env:...]` block in `firmware/platformio.ini`. You should never need
