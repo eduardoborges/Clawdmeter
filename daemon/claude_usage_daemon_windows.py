@@ -26,7 +26,7 @@ from bleak import BleakClient
 from bleak.backends.device import BLEDevice
 from bleak.exc import BleakError
 
-DEVICE_NAME = "Tally"
+DEVICE_NAME = "Claudio"
 SERVICE_UUID = "4c41555a-4465-7669-6365-000000000001"
 RX_CHAR_UUID = "4c41555a-4465-7669-6365-000000000002"
 REQ_CHAR_UUID = "4c41555a-4465-7669-6365-000000000004"
@@ -43,8 +43,8 @@ RECONNECT_BACKOFF_CAP = 8  # D-05: fast-reconnect cap (seconds); keeps stacked r
 
 # Optional reset chime.
 # Optional clock display. 
-# Config lives under the same Tally dir as daemon.log.
-CONFIG_FILE = Path(os.environ.get("LOCALAPPDATA", Path.home() / "AppData" / "Local")) / "Tally" / "config"
+# Config lives under the same Claudio dir as daemon.log.
+CONFIG_FILE = Path(os.environ.get("LOCALAPPDATA", Path.home() / "AppData" / "Local")) / "Claudio" / "config"
 
 API_URL = "https://api.anthropic.com/v1/messages"
 API_HEADERS_TEMPLATE = {
@@ -71,11 +71,11 @@ def _build_file_logger() -> logging.Logger | None:
     """
     if sys.platform != "win32":
         return None
-    logger = logging.getLogger("tally.daemon")
+    logger = logging.getLogger("claudio.daemon")
     if logger.handlers:
         return logger  # idempotent across re-import (tray imports this module)
     base = Path(os.environ.get("LOCALAPPDATA", Path.home() / "AppData" / "Local"))
-    path = base / "Tally" / "daemon.log"
+    path = base / "Claudio" / "daemon.log"
     try:
         path.parent.mkdir(parents=True, exist_ok=True)
         handler = logging.handlers.RotatingFileHandler(
@@ -316,19 +316,19 @@ def _mac_from_pnp_instance_id(instance_id: str) -> str | None:
 
 
 def discover_bonded_address() -> str | None:
-    """Return the BLE address of the bonded Tally, or None.
+    """Return the BLE address of the bonded Claudio, or None.
 
     A device that is paired AND connected to Windows stops advertising, so
     BleakScanner can't see it (the steady state once paired — see
     README-windows.md). WinRT can still connect to it directly by address, so
     we recover that address from the OS:
 
-    1. TALLY_BLE_ADDRESS env override (skips discovery — testing / pinning).
+    1. CLAUDIO_BLE_ADDRESS env override (skips discovery — testing / pinning).
     2. Windows PnP table, filtered to the device's FriendlyName.
 
     Non-Windows or any failure returns None.
     """
-    if override := os.environ.get("TALLY_BLE_ADDRESS"):
+    if override := os.environ.get("CLAUDIO_BLE_ADDRESS"):
         return override.strip().upper()
     if sys.platform != "win32":
         return None
@@ -355,10 +355,10 @@ def discover_bonded_address() -> str | None:
 
 
 async def acquire_target():
-    """Return a connectable handle for the Tally, or None.
+    """Return a connectable handle for the Claudio, or None.
 
     Targets only the device bonded to THIS machine (via the PnP table /
-    TALLY_BLE_ADDRESS) — it never scans for a nearby device by name, so it
+    CLAUDIO_BLE_ADDRESS) — it never scans for a nearby device by name, so it
     can't grab a stranger's or the wrong nearby unit. The device must be paired
     with Windows once first (the documented setup). Returns a BLEDevice or None.
     """

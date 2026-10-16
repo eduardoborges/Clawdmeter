@@ -1,5 +1,5 @@
 #!/bin/bash
-# Build and flash Tally firmware on macOS.
+# Build and flash Claudio firmware on macOS.
 # Usage:
 #   ./flash-mac.sh <board>                       # auto-detect /dev/cu.usbmodem*
 #   ./flash-mac.sh <board> /dev/cu.usbmodem1101  # explicit USB serial port
@@ -33,7 +33,7 @@ if ! command -v pio >/dev/null; then
     exit 1
 fi
 
-echo "=== Flashing Tally ==="
+echo "=== Flashing Claudio ==="
 echo "Board: $BOARD"
 echo "Port:  $PORT"
 echo ""

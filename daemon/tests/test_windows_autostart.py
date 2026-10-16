@@ -51,7 +51,7 @@ def _make_winreg_mock(*, query_raises=False):
 
 def test_enable_writes_run_value():
     """enable() opens HKCU Run key with KEY_SET_VALUE and calls SetValueEx with
-    value name 'Tally' and type REG_SZ."""
+    value name 'Claudio' and type REG_SZ."""
     winreg, key_handle = _make_winreg_mock()
 
     with patch("daemon.autostart_windows.winreg", winreg):
@@ -70,7 +70,7 @@ def test_enable_writes_run_value():
     winreg.SetValueEx.assert_called_once()
     args = winreg.SetValueEx.call_args[0]
     assert args[0] is key_handle, "SetValueEx first arg must be the opened key handle"
-    assert args[1] == "Tally", "Value name must be 'Tally'"
+    assert args[1] == "Claudio", "Value name must be 'Claudio'"
     assert args[3] == winreg.REG_SZ, "Value type must be REG_SZ"
 
 
@@ -133,7 +133,7 @@ def test_disable_idempotent():
 
 
 def test_disable_calls_delete_value_with_correct_name():
-    """disable() calls DeleteValue with the value name 'Tally'."""
+    """disable() calls DeleteValue with the value name 'Claudio'."""
     winreg, key_handle = _make_winreg_mock()
     winreg.DeleteValue = MagicMock()
 
@@ -143,7 +143,7 @@ def test_disable_calls_delete_value_with_correct_name():
 
     winreg.DeleteValue.assert_called_once()
     args = winreg.DeleteValue.call_args[0]
-    assert args[1] == "Tally", f"DeleteValue must target 'Tally'; got {args[1]!r}"
+    assert args[1] == "Claudio", f"DeleteValue must target 'Claudio'; got {args[1]!r}"
 
 
 # ---------------------------------------------------------------------------

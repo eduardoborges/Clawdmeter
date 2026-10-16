@@ -1,8 +1,8 @@
-# Tally daemon config
+# Claudio daemon config
 #
 # Copy this file to:
 #   macOS / Linux : ~/.config/claude-usage-monitor/config
-#   Windows       : %LOCALAPPDATA%\Tally\config
+#   Windows       : %LOCALAPPDATA%\Claudio\config
 #
 # The daemon re-reads it on every poll, so edits take effect within ~60s — no restart needed.
 

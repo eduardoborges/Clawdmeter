@@ -2,7 +2,7 @@
 """Claude Usage Tracker Daemon (BLE) — macOS port of claude-usage-daemon.sh.
 
 Polls Claude API rate-limit headers and writes a JSON payload to the
-ESP32 "Tally" peripheral over a custom GATT service. Uses
+ESP32 "Claudio" peripheral over a custom GATT service. Uses
 bleak (CoreBluetooth backend on macOS).
 """
 
@@ -34,7 +34,7 @@ from daemon.stats import STATS_CACHE, load_messages as load_stats_messages  # no
 from daemon.sessions import sessions_message  # noqa: E402
 from daemon import today as today_stats  # noqa: E402
 
-DEVICE_NAME = "Tally"
+DEVICE_NAME = "Claudio"
 SERVICE_UUID = "4c41555a-4465-7669-6365-000000000001"
 RX_CHAR_UUID = "4c41555a-4465-7669-6365-000000000002"
 REQ_CHAR_UUID = "4c41555a-4465-7669-6365-000000000004"
@@ -277,7 +277,7 @@ async def _get_cb_manager():
 
 
 async def retrieve_connected_macos(skip_addr: str | None = None):
-    """Return a BLEDevice for a system-connected 'Tally', or None.
+    """Return a BLEDevice for a system-connected 'Claudio', or None.
 
     Two-step lookup, strongest signal first:
 
@@ -819,7 +819,7 @@ def unpair_macos() -> bool:
         return False
 
     # Each line looks like:
-    #   address: 28-84-85-55-5c-3d, ... name: "Tally", ...
+    #   address: 28-84-85-55-5c-3d, ... name: "Claudio", ...
     addr = None
     for line in out.splitlines():
         if f'name: "{DEVICE_NAME}"' in line:

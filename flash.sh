@@ -1,5 +1,5 @@
 #!/bin/bash
-# Build and flash Tally firmware on Linux.
+# Build and flash Claudio firmware on Linux.
 # Usage:
 #   ./flash.sh <board>                  # default port /dev/ttyACM0
 #   ./flash.sh <board> /dev/ttyACM1     # explicit USB serial port
@@ -19,7 +19,7 @@ if [ -z "$BOARD" ]; then
     exit 1
 fi
 
-echo "=== Flashing Tally ==="
+echo "=== Flashing Claudio ==="
 echo "Board: $BOARD"
 echo "Port:  $PORT"
 echo ""

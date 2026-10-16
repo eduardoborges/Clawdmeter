@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Quick end-to-end test of the macOS connected-peripheral path.
 
-Discovers the HID-held 'Tally', connects without scanning,
+Discovers the HID-held 'Claudio', connects without scanning,
 finds the custom GATT characteristics, and writes one test payload.
 Run from Terminal.app (which has Bluetooth permission):
 

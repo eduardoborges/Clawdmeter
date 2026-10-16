@@ -1,10 +1,10 @@
 #!/bin/bash
 # Claude Usage Tracker Daemon (BLE)
 # Reads Claude Code OAuth token, polls usage via API, sends to ESP32 over BLE GATT.
-# Auto-connects and reconnects to the Tally BLE device.
+# Auto-connects and reconnects to the Claudio BLE device.
 # Dependencies: curl, awk, bluetoothctl, busctl, dbus-monitor, python3, setsid, stdbuf
 
-DEVICE_NAME="Tally"
+DEVICE_NAME="Claudio"
 DEVICE_MAC="${DEVICE_MAC:-}"  # auto-discovered if empty
 SERVICE_UUID="4c41555a-4465-7669-6365-000000000001"
 RX_CHAR_UUID="4c41555a-4465-7669-6365-000000000002"
@@ -397,7 +397,7 @@ save_mac() {
     echo "$DEVICE_MAC" > "$SAVED_MAC_FILE"
 }
 
-# Find a Tally the system already knows about — paired first, then merely
+# Find a Claudio the system already knows about — paired first, then merely
 # connected — WITHOUT an LE advertising scan. bluez only lists devices this host
 # has bonded/connected to, so we can't accidentally grab a stranger's advertising
 # unit. The device is a bonded BLE HID keyboard you pair once anyway, so we never
