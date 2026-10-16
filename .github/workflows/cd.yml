@@ -20,7 +20,7 @@ env:
 
 jobs:
   app:
-    runs-on: macos-26
+    runs-on: macos-latest
     timeout-minutes: 30
     environment:
       name: release
@@ -69,10 +69,32 @@ jobs:
       matrix:
         env: [waveshare_amoled_216, waveshare_amoled_18, waveshare_amoled_216_c6, waveshare_amoled_18_c6,
               waveshare_amoled_206, waveshare_lcd_154, waveshare_lcd_4]
+    env:
+      # Compiled objects keyed by their inputs, so the Arduino core and LVGL
+      # skip the compiler when they haven't changed.
+      PLATFORMIO_BUILD_CACHE_DIR: ${{ github.workspace }}/.pio-build-cache
     steps:
       - uses: actions/checkout@v7
         with:
           ref: ${{ env.TAG }}
+      # The platform and toolchains, one cache per chip.
+      - uses: actions/cache@v6
+        with:
+          path: |
+            ~/.platformio
+            !~/.platformio/.cache
+          key: pio-${{ endsWith(matrix.env, '_c6') && 'c6' || 's3' }}-${{ hashFiles('firmware/platformio.ini') }}
+      # Libraries stay at the cached versions until platformio.ini changes.
+      - uses: actions/cache@v6
+        with:
+          path: firmware/.pio/libdeps/${{ matrix.env }}
+          key: libdeps-${{ matrix.env }}-${{ hashFiles('firmware/platformio.ini') }}
+      # A new key every run keeps the newest objects; restore-keys picks the latest one.
+      - uses: actions/cache@v6
+        with:
+          path: .pio-build-cache
+          key: pio-objects-${{ matrix.env }}-${{ github.run_id }}
+          restore-keys: pio-objects-${{ matrix.env }}-
       - uses: actions/setup-python@v7
         with:
           python-version: "3.13"
