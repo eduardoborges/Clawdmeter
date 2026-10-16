@@ -16,9 +16,10 @@ rm -rf "$app"
 mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources"
 cp "$(swift build -c release --show-bin-path)/Tally" "$app/Contents/MacOS/"
 cp ../daemon/attention-hook.sh "$app/Contents/Resources/"
-# AppIcon.icon is an Icon Composer document: the official idle Clawd on the
-# display's black. actool turns it into Assets.car, which macOS 26 needs to draw
-# the icon without a gray frame, plus an .icns for older systems.
+# AppIcon.icon is an Icon Composer document: Clawd typing on the laptop, a frame
+# of the official animation, on the display's black. actool turns it into
+# Assets.car, which macOS 26 needs to draw the icon without a gray frame, plus an
+# .icns for older systems.
 xcrun actool AppIcon.icon --compile "$app/Contents/Resources" --platform macosx \
   --minimum-deployment-target 14.0 --app-icon AppIcon \
   --output-partial-info-plist "$(mktemp -d)/icon.plist" > /dev/null
