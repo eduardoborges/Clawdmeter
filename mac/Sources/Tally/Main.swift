@@ -60,6 +60,29 @@ enum Main {
             done.wait()
             return
         }
+        // `--preview` shows the panel with made-up data in a floating window at the
+        // top left of the screen, where the system draws its real glass.
+        if args.contains("--preview") {
+            let app = NSApplication.shared
+            app.setActivationPolicy(.accessory)
+            let host = NSHostingView(rootView: PopoverView(dashboard: .sample, linkStatus: "Connected", connected: true,
+                                                           onSettings: {})
+                .clipShape(RoundedRectangle(cornerRadius: 16))
+                .preferredColorScheme(.dark))
+            host.frame.size = host.fittingSize
+            let screen = NSScreen.main!.frame
+            let panel = NSPanel(contentRect: NSRect(x: screen.minX + 80, y: screen.maxY - 80 - host.frame.height,
+                                                    width: host.frame.width, height: host.frame.height),
+                                styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
+            panel.isOpaque = false
+            panel.backgroundColor = .clear
+            panel.level = .floating
+            panel.contentView = host
+            panel.orderFrontRegardless()
+            print(Int(host.frame.width), Int(host.frame.height))
+            app.run()
+            return
+        }
         // `--render <png>` draws the panel with made-up data, to work on the
         // design without clicking the menu bar.
         if let i = args.firstIndex(of: "--render"), i + 1 < args.count {

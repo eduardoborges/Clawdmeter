@@ -54,5 +54,6 @@ private struct MenuPanel: View {
                         openSettings()
                     },
                     onQuit: { NSApplication.shared.terminate(nil) })
+            .preferredColorScheme(.dark)   // dark glass, so the display's light text stays readable
     }
 }

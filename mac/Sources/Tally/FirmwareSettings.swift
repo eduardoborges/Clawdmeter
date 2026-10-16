@@ -66,8 +66,10 @@ struct FirmwareSettings: View {
                 }
                 HStack {
                     Button("Flash Latest Release") { flashLatest() }
+                        .glassPrimaryAction()
                         .disabled(release == nil || port.isEmpty || job.running)
                     Button("Flash a File…") { pickFile() }
+                        .glassAction()
                         .disabled(port.isEmpty || job.running)
                     if Firmware.esptool() == nil {
                         Text("Needs `brew install esptool`").font(.caption).foregroundStyle(.secondary)

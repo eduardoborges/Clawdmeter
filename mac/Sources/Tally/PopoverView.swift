@@ -17,7 +17,7 @@ struct PopoverView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             header
-            tabs
+            GlassTabs(tabs: Tab.allCases, selection: $tab)
             switch tab {
             case .now:
                 UsagePanel(usage: dashboard.usage, noToken: dashboard.noToken)
@@ -30,7 +30,7 @@ struct PopoverView: View {
         }
         .padding(16)
         .frame(width: 340)
-        .background(Theme.background)
+        .panelBackground()
         .foregroundStyle(Theme.text)
         .environment(\.colorScheme, .dark)
     }
@@ -51,25 +51,6 @@ struct PopoverView: View {
         }
     }
 
-    private var tabs: some View {
-        HStack(spacing: 16) {
-            ForEach(Tab.allCases, id: \.self) { t in
-                Button { tab = t } label: {
-                    VStack(spacing: 4) {
-                        Text(t.rawValue).font(.system(size: 12, weight: .medium))
-                            .foregroundStyle(tab == t ? Theme.text : Theme.faint)
-                        Rectangle().fill(tab == t ? Theme.accent : .clear).frame(height: 2)
-                    }
-                    .fixedSize()
-                    .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-            }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .overlay(alignment: .bottom) { Rectangle().fill(Theme.line).frame(height: 1) }
-    }
-
     private var footer: some View {
         HStack(spacing: 14) {
             if let updated = dashboard.updated {
@@ -77,10 +58,9 @@ struct PopoverView: View {
                     .font(.system(size: 10, design: .monospaced)).foregroundStyle(Theme.faint)
             }
             Spacer()
-            if let onSettings { Button("Settings…", action: onSettings) }
-            Button("Quit", action: onQuit)
+            if let onSettings { Button("Settings…", action: onSettings).glassAction() }
+            Button("Quit", action: onQuit).glassAction()
         }
-        .buttonStyle(.plain)
         .font(.system(size: 11))
         .foregroundStyle(Theme.dim)
     }
