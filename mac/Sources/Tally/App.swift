@@ -41,6 +41,21 @@ private struct MenuBarLabel: View {
             Image(nsImage: MenuBarIcon.shared.image)
             if menuBarUsage.isOn, let usage = dashboard.usage { Text("\(usage.session)%").monospacedDigit() }
         }
+        .onAppear { DispatchQueue.main.async(execute: fitStatusItem) }
+        .onChange(of: menuBarUsage.isOn) { fitStatusItem() }
+    }
+
+    /// MenuBarExtra pads the icon by 9 pt on each side. With 3 pt, the gaps to
+    /// the neighboring icons measure 19 to 22 pt, like the gaps between the other
+    /// items. It has no API for this, so this reaches the status item through its
+    /// window's private statusItem key. The usage text needs a variable width and
+    /// keeps the default.
+    private func fitStatusItem() {
+        let key = "statusItem"
+        for window in NSApp.windows where window.className == "NSStatusBarWindow" && window.responds(to: NSSelectorFromString(key)) {
+            (window.value(forKey: key) as? NSStatusItem)?.length = menuBarUsage.isOn
+                ? NSStatusItem.variableLength : MenuBarIcon.canvas.width + 6
+        }
     }
 }
 
