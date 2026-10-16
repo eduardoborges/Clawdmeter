@@ -1,8 +1,8 @@
 import AppKit
 import Observation
 
-/// The menu bar icon. At rest it is Claude's spark, which the system draws in
-/// black or white. While any session works it is Clawd typing on a laptop, held
+/// The menu bar icon, drawn by the system in white or black. At rest it is
+/// Claude's spark; while any session works it is Clawd typing on a laptop, held
 /// still when Reduce Motion is on.
 @MainActor
 @Observable
@@ -19,8 +19,8 @@ final class MenuBarIcon {
 
     private init() {
         let decode = { (png: String) in Data(base64Encoded: png).flatMap(NSImage.init(data:)) }
-        rest = Self.template(decode(claudeLogoPNG))
-        frames = clawdLaptopFramePNGs.compactMap(decode).map(Self.pixelArt)
+        rest = Self.icon(decode(claudeLogoPNG), size: NSSize(width: 18, height: 18))
+        frames = clawdLaptopFramePNGs.compactMap(decode).map { Self.icon($0, size: Self.pixelSize($0), sharp: true) }
         image = rest
     }
 
@@ -48,24 +48,24 @@ final class MenuBarIcon {
         image = frames[frame]
     }
 
-    /// An 18 pt template from an alpha mask, tinted by the system to match the
-    /// menu bar.
-    private static func template(_ mask: NSImage?) -> NSImage {
-        let image = NSImage(size: NSSize(width: 18, height: 18), flipped: false) { rect in
-            mask?.draw(in: rect)
+    /// Both states share one canvas, so the menu bar items beside the icon stay
+    /// put when it switches.
+    static let canvas = NSSize(width: 28, height: 18)
+
+    private static func pixelSize(_ image: NSImage) -> NSSize {
+        image.representations.first.map { NSSize(width: $0.pixelsWide, height: $0.pixelsHigh) } ?? image.size
+    }
+
+    /// A template the system draws white or black to match the menu bar, with the
+    /// mask centered on the canvas. Pixel art is scaled without smoothing.
+    private static func icon(_ mask: NSImage?, size: NSSize, sharp: Bool = false) -> NSImage {
+        let image = NSImage(size: canvas, flipped: false) { rect in
+            if sharp { NSGraphicsContext.current?.imageInterpolation = .none }
+            mask?.draw(in: NSRect(x: ((rect.width - size.width) / 2).rounded(), y: ((rect.height - size.height) / 2).rounded(),
+                                  width: size.width, height: size.height))
             return true
         }
         image.isTemplate = true
         return image
-    }
-
-    /// One point per pixel, scaled without smoothing so the cells stay sharp.
-    private static func pixelArt(_ source: NSImage) -> NSImage {
-        let size = source.representations.first.map { NSSize(width: $0.pixelsWide, height: $0.pixelsHigh) } ?? source.size
-        return NSImage(size: size, flipped: false) { rect in
-            NSGraphicsContext.current?.imageInterpolation = .none
-            source.draw(in: rect)
-            return true
-        }
     }
 }
