@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.2.0](https://github.com/eduardoborges/tally/compare/v0.1.0...v0.2.0) (2026-10-16)
+
+
+### Features
+
+* **mac:** install the Claude Code hooks from the app ([e0cc6c4](https://github.com/eduardoborges/tally/commit/e0cc6c43e0af41f68ecece37ee785cef0163135b))
+* **mac:** welcome guide that flashes and pairs the display ([088dd43](https://github.com/eduardoborges/tally/commit/088dd437d55a5cd552b510cb0f706d633f7f6942))
+
+
+### Bug Fixes
+
+* **mac:** mark the welcome guide seen only when its window opens ([d534f2b](https://github.com/eduardoborges/tally/commit/d534f2b429d40faa923b1e7d0825ff17336980cb))
+* **mac:** write settings.json the way Claude Code formats it ([bce05c5](https://github.com/eduardoborges/tally/commit/bce05c5c8f5362d85f9ef595a9a24824278bb166))
+
 ## 0.1.0 (2026-10-16)
 
 
