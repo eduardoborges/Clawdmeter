@@ -51,6 +51,7 @@ enum Welcome {
             window.center()
             self.window = window
         }
+        UserDefaults.standard.set(true, forKey: "welcomed")
         NSApp.activate(ignoringOtherApps: true)   // a menu bar app's windows open behind others
         window?.makeKeyAndOrderFront(nil)
     }

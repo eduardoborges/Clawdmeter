@@ -11,7 +11,6 @@ struct WelcomeView: View {
     @State private var step: Int
     @State private var flasher = Flasher()
     @State private var hooks = HookInstaller()
-    @AppStorage("welcomed") private var welcomed = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     init(linkStatus: String, connected: Bool, step: Int = 0, onDone: @escaping () -> Void = {}) {
@@ -49,7 +48,6 @@ struct WelcomeView: View {
         .frame(width: 540, height: 460)
         .tint(Theme.accent)
         .animation(reduceMotion ? nil : .spring(duration: 0.45), value: step)
-        .onAppear { welcomed = true }
     }
 
     private var welcome: some View {
