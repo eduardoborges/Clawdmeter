@@ -15,7 +15,7 @@ private let link = DeviceLink()
     return nil
 }()
 
-struct TallyApp: App {
+struct ClaudioApp: App {
     init() {
         _ = daemon   // globals start lazily
     }

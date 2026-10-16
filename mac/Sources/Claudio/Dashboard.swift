@@ -1,6 +1,6 @@
 import Foundation
 import Observation
-import TallyCore
+import ClaudioCore
 
 /// Everything the menu bar panel shows. The daemon fills it on every tick,
 /// whether or not the display is connected.
@@ -55,7 +55,7 @@ extension Dashboard {
         let d = Dashboard()
         d.usage = Usage(session: 34, sessionReset: 168, weekly: 82, weeklyReset: 5_400, plan: "Max 5x")
         d.sessions = [
-            .init(id: "1", state: "a", project: "tally", title: "Fix the touch axis", branch: "main",
+            .init(id: "1", state: "a", project: "claudio", title: "Fix the touch axis", branch: "main",
                   doing: "Needs your input", minutes: 0),
             .init(id: "2", state: "w", project: "api", title: "Rate limit middleware", branch: "feat/rate-limit",
                   doing: "Editing", minutes: 12),
@@ -64,7 +64,7 @@ extension Dashboard {
             .init(id: "4", state: "d", project: "blog", title: "October post", branch: "drafts", doing: "", minutes: 38),
         ]
         d.today = Today.Summary(perHour: [0, 0, 0, 0, 0, 0, 0, 0, 0, 6, 12, 15, 9, 14, 18, 16, 11, 13, 10, 7, 4, 2, 0, 0],
-                                prompts: 48, toolCalls: 812, tokens: 184_200_000, sessions: 9, topProject: "tally")
+                                prompts: 48, toolCalls: 812, tokens: 184_200_000, sessions: 9, topProject: "claudio")
         let today = Day()
         let days = (0..<150).compactMap { i -> [String: Any]? in
             i % 7 == 6 || i % 11 == 3 || i > 140 ? nil : ["date": today.adding(-i).iso, "messageCount": 20 + i * 37 % 180]

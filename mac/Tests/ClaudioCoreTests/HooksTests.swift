@@ -1,6 +1,6 @@
 import Foundation
 import Testing
-@testable import TallyCore
+@testable import ClaudioCore
 
 @Test func installedHooksAreTheOnesCallingTheScript() throws {
     let file = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
@@ -33,7 +33,7 @@ import Testing
     """#
     try original.write(to: real, atomically: true, encoding: .utf8)
     try FileManager.default.createSymbolicLink(at: link, withDestinationURL: real)
-    let script = "/Applications/Tally.app/Contents/Resources/attention-hook.sh"
+    let script = "/Applications/Claudio.app/Contents/Resources/attention-hook.sh"
     #expect(!Hooks.current(script: script, in: link))
 
     try Hooks.install(script: script, in: link, backup: backup)

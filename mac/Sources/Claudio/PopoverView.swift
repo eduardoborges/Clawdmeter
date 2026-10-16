@@ -1,6 +1,6 @@
 import Charts
 import SwiftUI
-import TallyCore
+import ClaudioCore
 
 /// The panel that opens from the menu bar: system controls and type on the
 /// menu bar's own material, with the display's accent for the bars, the
@@ -41,7 +41,7 @@ struct PopoverView: View {
 
     private var header: some View {
         HStack(alignment: .firstTextBaseline, spacing: 8) {
-            Text("Tally").font(.headline)
+            Text("Claudio").font(.headline)
             Text(connected ? "Display connected" : linkStatus).font(.caption)
                 .foregroundStyle(connected ? Color.secondary : Theme.accent)
             Spacer()

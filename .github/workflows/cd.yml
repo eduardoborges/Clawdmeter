@@ -1,6 +1,6 @@
 name: CD
 
-# Builds a published release and attaches Tally.dmg and one firmware zip per
+# Builds a published release and attaches Claudio.dmg and one firmware zip per
 # board, which the Mac app's Firmware tab downloads. The manual dispatch
 # rebuilds an existing tag.
 on:
@@ -24,7 +24,7 @@ jobs:
     timeout-minutes: 30
     environment:
       name: release
-      url: https://github.com/eduardoborges/tally/releases/tag/${{ github.event.release.tag_name || inputs.tag }}
+      url: https://github.com/eduardoborges/claudio/releases/tag/${{ github.event.release.tag_name || inputs.tag }}
     env:
       # Without the signing secrets the build ships ad hoc signed.
       HAVE_SIGNING: ${{ secrets.MACOS_CERT_P12 != '' }}
@@ -57,7 +57,7 @@ jobs:
       - name: Upload
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release upload "$TAG" mac/build/Tally.dmg --clobber
+        run: gh release upload "$TAG" mac/build/Claudio.dmg --clobber
 
   firmware:
     runs-on: ubuntu-latest

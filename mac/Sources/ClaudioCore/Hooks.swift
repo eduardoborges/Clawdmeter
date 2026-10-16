@@ -16,7 +16,7 @@ public enum Hooks {
         ("SubagentStop", "The running agents count"),
         ("SessionEnd", "Taking closed sessions off the list"),
     ]
-    /// Tally's hooks as the README lists them: event, matcher and the script's argument.
+    /// Claudio's hooks as the README lists them: event, matcher and the script's argument.
     static let entries: [(event: String, matcher: String?, arg: String)] = [
         ("Notification", "permission_prompt|elicitation_dialog", "alert"),
         ("PreToolUse", "AskUserQuestion", "alert"),
@@ -33,14 +33,14 @@ public enum Hooks {
         Set(calls(in: file).map(\.event))
     }
 
-    /// Whether all of Tally's hooks are there and every attention-hook.sh call
+    /// Whether all of Claudio's hooks are there and every attention-hook.sh call
     /// runs `script`, so none points at an old copy.
     public static func current(script: String, in file: URL = settings) -> Bool {
         let calls = calls(in: file)
         return Set(calls.map(\.event)) == Set(events.map(\.event)) && calls.allSatisfy { $0.command.contains(script) }
     }
 
-    /// Swaps every attention-hook.sh call for Tally's set, run through /bin/sh
+    /// Swaps every attention-hook.sh call for Claudio's set, run through /bin/sh
     /// from `script`, and leaves the rest of the file alone. Writes through a
     /// symlink (dotfiles keep settings.json in a repo) and copies the old file
     /// to `backup` first. A file that isn't a JSON object throws instead of

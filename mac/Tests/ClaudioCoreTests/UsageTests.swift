@@ -1,6 +1,6 @@
 import Foundation
 import Testing
-@testable import TallyCore
+@testable import ClaudioCore
 
 // The cases from daemon/tests/test_limit_429.py, test_macos_multidir.py and
 // test_freeride.py that apply to the Mac.

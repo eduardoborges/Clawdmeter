@@ -1,6 +1,6 @@
 import AppKit
 import SwiftUI
-import TallyCore
+import ClaudioCore
 
 /// The board to flash, its USB port and the latest release, plus one flash at
 /// a time with its progress and esptool's output. Settings and the welcome
@@ -48,7 +48,7 @@ final class Flasher {
     func pickFile() {
         let panel = NSOpenPanel()
         panel.allowedContentTypes = [.zip]
-        panel.message = "Choose a tally-firmware zip"
+        panel.message = "Choose a claudio-firmware zip"
         guard panel.runModal() == .OK, let zip = panel.url else { return }
         run(zip: zip)
     }

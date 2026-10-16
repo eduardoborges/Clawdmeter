@@ -36,7 +36,7 @@ final class DeviceLink: NSObject {
 
     private func findDevice() {
         let found = central.retrieveConnectedPeripherals(withServices: [Self.service]).first
-            ?? central.retrieveConnectedPeripherals(withServices: [Self.hid]).first { $0.name == "Tally" }
+            ?? central.retrieveConnectedPeripherals(withServices: [Self.hid]).first { $0.name == "Claudio" }
         guard let found else {
             status = "Looking for the display"
             retry()

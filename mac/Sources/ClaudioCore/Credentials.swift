@@ -1,6 +1,6 @@
 import Foundation
 
-/// The Claude Code OAuth token, read the way the macOS daemon reads it. Tally
+/// The Claude Code OAuth token, read the way the macOS daemon reads it. Claudio
 /// never refreshes it: Claude Code owns the token and renews it on its own.
 public enum Credentials {
     public static let defaultDir = FileManager.default.homeDirectoryForCurrentUser.appending(path: ".claude")

@@ -1,5 +1,5 @@
 #!/bin/sh
-# Builds mac/build/Tally.app, plus mac/build/Tally.dmg with --dmg. The version
+# Builds mac/build/Claudio.app, plus mac/build/Claudio.dmg with --dmg. The version
 # comes from version.txt.
 # SIGN_IDENTITY signs for distribution (Developer ID, hardened runtime), and
 # NOTARY_KEY_ID, NOTARY_ISSUER_ID and NOTARY_KEY_P8 add notarization.
@@ -10,11 +10,11 @@ set -e
 : "${SIGN_ID:=$(security find-identity -v -p codesigning \
   | awk '/Apple Development/ && !/REVOKED/ { print $2; exit }')}"
 cd "$(dirname "$0")"
-swift build -c release --product Tally
-app=build/Tally.app
+swift build -c release --product Claudio
+app=build/Claudio.app
 rm -rf "$app"
 mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources"
-cp "$(swift build -c release --show-bin-path)/Tally" "$app/Contents/MacOS/"
+cp "$(swift build -c release --show-bin-path)/Claudio" "$app/Contents/MacOS/"
 cp ../daemon/attention-hook.sh "$app/Contents/Resources/"
 # AppIcon.icon is an Icon Composer document: Clawd typing on the laptop, a frame
 # of the official animation, on the display's black. actool turns it into
@@ -49,7 +49,7 @@ if [ "$1" = --dmg ]; then
   stage=$(mktemp -d)
   cp -R "$app" "$stage/"
   ln -s /Applications "$stage/Applications"
-  hdiutil create -volname Tally -srcfolder "$stage" -ov -format UDZO build/Tally.dmg
+  hdiutil create -volname Claudio -srcfolder "$stage" -ov -format UDZO build/Claudio.dmg
   rm -rf "$stage"
 fi
 echo "$app"

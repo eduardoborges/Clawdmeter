@@ -1,5 +1,5 @@
 import SwiftUI
-import TallyCore
+import ClaudioCore
 
 /// The history tab: the display's Stats workspace, plus the busiest hour today.
 struct ActivityView: View {

@@ -4,7 +4,7 @@ import Foundation
 /// the images plus a manifest with the chip and each segment's offset. The
 /// NVS partition isn't in the zip, so the BLE bond and saved settings survive.
 public enum Firmware {
-    public static let repo = "eduardoborges/tally"
+    public static let repo = "eduardoborges/claudio"
 
     public struct Manifest: Decodable {
         public struct Segment: Decodable {
@@ -50,7 +50,7 @@ public enum Firmware {
 
     /// Unzips a firmware zip into a temporary folder and reads its manifest.
     public static func open(zip: URL) throws -> (dir: URL, manifest: Manifest) {
-        let dir = FileManager.default.temporaryDirectory.appending(path: "tally-firmware-\(UUID().uuidString)")
+        let dir = FileManager.default.temporaryDirectory.appending(path: "claudio-firmware-\(UUID().uuidString)")
         let ditto = Process()
         ditto.executableURL = URL(fileURLWithPath: "/usr/bin/ditto")
         ditto.arguments = ["-x", "-k", zip.path, dir.path]
@@ -127,7 +127,7 @@ public enum Firmware {
               (response as? HTTPURLResponse)?.statusCode == 200,
               let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
               let tag = json["tag_name"] as? String,
-              let asset = (json["assets"] as? [[String: Any]])?.first(where: { $0["name"] as? String == "tally-firmware-\(env).zip" }),
+              let asset = (json["assets"] as? [[String: Any]])?.first(where: { $0["name"] as? String == "claudio-firmware-\(env).zip" }),
               let link = (asset["browser_download_url"] as? String).flatMap(URL.init(string:)) else { return nil }
         return (tag, link)
     }
@@ -135,7 +135,7 @@ public enum Firmware {
     /// Downloads a release zip to a temporary file.
     public static func download(_ url: URL) async throws -> URL {
         let (file, _) = try await URLSession.shared.download(from: url)
-        let zip = FileManager.default.temporaryDirectory.appending(path: "tally-firmware-\(UUID().uuidString).zip")
+        let zip = FileManager.default.temporaryDirectory.appending(path: "claudio-firmware-\(UUID().uuidString).zip")
         try FileManager.default.moveItem(at: file, to: zip)
         return zip
     }

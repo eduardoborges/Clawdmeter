@@ -1,6 +1,6 @@
 import Foundation
 import Testing
-@testable import TallyCore
+@testable import ClaudioCore
 
 // The same cases as daemon/tests/test_stats.py.
 

@@ -1,7 +1,7 @@
 import AppKit
 import ServiceManagement
 import SwiftUI
-import TallyCore
+import ClaudioCore
 
 @main
 @MainActor
@@ -25,7 +25,7 @@ enum Main {
                 }
                 done.wait()
             default:
-                FileHandle.standardError.write(Data("usage: Tally --dump ss|td|stats|usage\n".utf8))
+                FileHandle.standardError.write(Data("usage: Claudio --dump ss|td|stats|usage\n".utf8))
                 exit(2)
             }
             return
@@ -112,7 +112,7 @@ enum Main {
             }
             return
         }
-        TallyApp.main()
+        ClaudioApp.main()
     }
 }
 

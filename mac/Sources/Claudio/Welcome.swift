@@ -1,6 +1,6 @@
 import AppKit
 import SwiftUI
-import TallyCore
+import ClaudioCore
 
 /// First-launch guide, also in Settings. It opens on its own once; closing it
 /// early doesn't bring it back.
@@ -58,8 +58,8 @@ struct WelcomeView: View {
                 .resizable()
                 .frame(width: 120, height: 80)
                 .foregroundStyle(Theme.accent)
-            header("Welcome to Tally",
-                   "Tally feeds the display on your desk with your Claude Code usage, open sessions and what each one is doing. It lives in the menu bar.")
+            header("Welcome to Claudio",
+                   "Claudio feeds the display on your desk with your Claude Code usage, open sessions and what each one is doing. It lives in the menu bar.")
             Button("Get Started") { step += 1 }.primary()
         }
     }
@@ -107,7 +107,7 @@ struct WelcomeView: View {
         VStack(spacing: 20) {
             symbol("antenna.radiowaves.left.and.right")
             header("Connect over Bluetooth",
-                   "Turn the display on and pair it once: in System Settings → Bluetooth, click Connect next to Tally. macOS asks for Bluetooth access the first time.")
+                   "Turn the display on and pair it once: in System Settings → Bluetooth, click Connect next to Claudio. macOS asks for Bluetooth access the first time.")
             if connected {
                 Label("Connected", systemImage: "checkmark.circle.fill").foregroundStyle(.green)
             } else {
@@ -130,7 +130,7 @@ struct WelcomeView: View {
         VStack(spacing: 20) {
             symbol("point.3.connected.trianglepath.dotted")
             header("Claude Code hooks",
-                   "Sessions, alerts and the corner Clawd come from Claude Code hooks. Tally adds them to ~/.claude/settings.json and keeps a backup of the old file.")
+                   "Sessions, alerts and the corner Clawd come from Claude Code hooks. Claudio adds them to ~/.claude/settings.json and keeps a backup of the old file.")
             if hooks.current {
                 Label("Hooks installed", systemImage: "checkmark.circle.fill").foregroundStyle(.green)
             } else if let error = hooks.error {

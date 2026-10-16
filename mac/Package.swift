@@ -2,12 +2,12 @@
 import PackageDescription
 
 let package = Package(
-    name: "Tally",
+    name: "Claudio",
     platforms: [.macOS(.v14)],
     targets: [
-        .target(name: "TallyCore"),
-        .executableTarget(name: "Tally", dependencies: ["TallyCore"]),
-        .testTarget(name: "TallyCoreTests", dependencies: ["TallyCore"]),
+        .target(name: "ClaudioCore"),
+        .executableTarget(name: "Claudio", dependencies: ["ClaudioCore"]),
+        .testTarget(name: "ClaudioCoreTests", dependencies: ["ClaudioCore"]),
     ],
     // CoreBluetooth delegates and strict concurrency don't mix well yet.
     swiftLanguageModes: [.v5]

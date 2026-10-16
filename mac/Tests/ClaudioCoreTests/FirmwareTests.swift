@@ -1,6 +1,6 @@
 import Foundation
 import Testing
-@testable import TallyCore
+@testable import ClaudioCore
 
 private final class Collected: @unchecked Sendable {
     var progress: [Double] = []

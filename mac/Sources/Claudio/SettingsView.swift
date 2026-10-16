@@ -1,6 +1,6 @@
 import ServiceManagement
 import SwiftUI
-import TallyCore
+import ClaudioCore
 
 /// The settings window. Every option lives in the same config file the Linux
 /// daemon reads, so the two stay interchangeable.
@@ -53,7 +53,7 @@ struct OpenAtLoginToggle: View {
     @State private var on = SMAppService.mainApp.status == .enabled
 
     var body: some View {
-        Toggle("Open Tally at login", isOn: $on)
+        Toggle("Open Claudio at login", isOn: $on)
             .onChange(of: on) { _, on in
                 do {
                     try on ? SMAppService.mainApp.register() : SMAppService.mainApp.unregister()
@@ -80,12 +80,12 @@ private struct GeneralSettings: View {
             } header: {
                 Text("Accounts")
             } footer: {
-                Note("Comma separated, like `~/.claude, ~/.claude-work`. With more than one, Tally shows the plan you're using.")
+                Note("Comma separated, like `~/.claude, ~/.claude-work`. With more than one, Claudio shows the plan you're using.")
             }
             Section("About") {
                 LabeledContent("Version", value: Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "dev")
                 LabeledContent("Settings file", value: "~/.config/claude-usage-monitor/config")
-                Link("github.com/eduardoborges/tally", destination: URL(string: "https://github.com/eduardoborges/tally")!)
+                Link("github.com/eduardoborges/claudio", destination: URL(string: "https://github.com/eduardoborges/claudio")!)
                 Button("Show Welcome Guide…") { Welcome.show() }
             }
         }
@@ -179,7 +179,7 @@ private struct HookSettings: View {
             if !hooks.current && hooks.script != nil {
                 Section {
                     HStack {
-                        Note("Tally adds its hooks to ~/.claude/settings.json and backs the file up to ~/.config/claude-usage-monitor first.")
+                        Note("Claudio adds its hooks to ~/.claude/settings.json and backs the file up to ~/.config/claude-usage-monitor first.")
                         Button(hooks.installed.isEmpty ? "Install Hooks" : "Update Hooks") { hooks.install() }
                             .buttonStyle(.borderedProminent)
                     }

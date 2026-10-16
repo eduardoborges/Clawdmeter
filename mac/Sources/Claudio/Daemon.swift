@@ -1,6 +1,6 @@
 import Foundation
 import Observation
-import TallyCore
+import ClaudioCore
 
 /// The Python daemon's loop: every 5 seconds, poll usage once a minute (right
 /// away for an alert, its clear or a refresh request from the device) and keep

@@ -46,7 +46,7 @@ def package(env: str) -> pathlib.Path:
     manifest = {"env": env, "chip": chip,
                 "segments": [{"offset": hex(offset), "file": path.name} for offset, path in sorted(images)]}
     DIST.mkdir(exist_ok=True)
-    zip_path = DIST / f"tally-firmware-{env}.zip"
+    zip_path = DIST / f"claudio-firmware-{env}.zip"
     with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as z:
         z.writestr("manifest.json", json.dumps(manifest, indent=2) + "\n")
         for _, path in images:

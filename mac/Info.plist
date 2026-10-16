@@ -7,11 +7,11 @@
 	<key>CFBundleIconName</key>
 	<string>AppIcon</string>
 	<key>CFBundleIdentifier</key>
-	<string>dev.eduardoborges.tally</string>
+	<string>dev.eduardoborges.claudio</string>
 	<key>CFBundleName</key>
-	<string>Tally</string>
+	<string>Claudio</string>
 	<key>CFBundleExecutable</key>
-	<string>Tally</string>
+	<string>Claudio</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>LSMinimumSystemVersion</key>
@@ -19,6 +19,6 @@
 	<key>LSUIElement</key>
 	<true/>
 	<key>NSBluetoothAlwaysUsageDescription</key>
-	<string>Tally sends your Claude Code usage to the display on your desk over Bluetooth.</string>
+	<string>Claudio sends your Claude Code usage to the display on your desk over Bluetooth.</string>
 </dict>
 </plist>
