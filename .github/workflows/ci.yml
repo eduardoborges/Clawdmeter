@@ -1,0 +1,24 @@
+name: CI
+
+# Builds and tests the Mac app. Release builds live in CD.
+on:
+  push:
+    branches: [main]
+    paths: ['mac/**', '.github/workflows/ci.yml']
+  pull_request:
+    paths: ['mac/**', '.github/workflows/ci.yml']
+
+jobs:
+  mac:
+    # macos-26: the UI uses SDK 26 APIs (glassEffect)
+    runs-on: macos-26
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: mac
+    steps:
+      - uses: actions/checkout@v7
+      - name: Build
+        run: swift build
+      - name: Test
+        run: swift test
