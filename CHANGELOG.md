@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.3.0](https://github.com/eduardoborges/claudio/compare/v0.2.0...v0.3.0) (2026-10-16)
+
+
+### ⚠ BREAKING CHANGES
+
+* rename the device and the daemons to Claudio
+
+### Features
+
+* **mac:** app icon with Clawd ([112789f](https://github.com/eduardoborges/claudio/commit/112789fd3a388e017ba6e2c7bedf98cc18441846))
+
+
+### Miscellaneous Chores
+
+* rename the device and the daemons to Claudio ([3f30b3c](https://github.com/eduardoborges/claudio/commit/3f30b3cc407bb559d663964966119c6f27247906))
+
 ## [0.2.0](https://github.com/eduardoborges/tally/compare/v0.1.0...v0.2.0) (2026-10-16)
 
 
