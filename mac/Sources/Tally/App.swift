@@ -32,6 +32,37 @@ struct TallyApp: App {
     }
 }
 
+/// The welcome guide's window. Before macOS 15 a Window scene would open on
+/// every launch, so this is a plain NSWindow.
+@MainActor
+enum Welcome {
+    private static var window: NSWindow?
+
+    static func show() { show(LiveWelcome()) }
+
+    static func show(_ content: some View) {
+        if window?.isVisible != true {
+            let window = NSWindow(contentViewController: NSHostingController(rootView: content))
+            window.styleMask = [.titled, .closable, .fullSizeContentView]
+            window.titlebarAppearsTransparent = true
+            window.titleVisibility = .hidden
+            window.isMovableByWindowBackground = true
+            window.isReleasedWhenClosed = false
+            window.appearance = NSAppearance(named: .darkAqua)
+            window.center()
+            self.window = window
+        }
+        NSApp.activate(ignoringOtherApps: true)   // a menu bar app's windows open behind others
+        window?.makeKeyAndOrderFront(nil)
+    }
+
+    private struct LiveWelcome: View {
+        var body: some View {
+            WelcomeView(linkStatus: link.status, connected: link.isReady) { Welcome.window?.close() }
+        }
+    }
+}
+
 /// Whether the menu bar shows the 5-hour usage next to the icon.
 @MainActor let menuBarUsage = Setting("menubar_usage", allowed: ["off", "on"], default: "on")
 
@@ -41,7 +72,10 @@ private struct MenuBarLabel: View {
             Image(nsImage: MenuBarIcon.shared.image)
             if menuBarUsage.isOn, let usage = dashboard.usage { Text("\(usage.session)%").monospacedDigit() }
         }
-        .onAppear { DispatchQueue.main.async(execute: fitStatusItem) }
+        .onAppear {
+            DispatchQueue.main.async(execute: fitStatusItem)
+            if !UserDefaults.standard.bool(forKey: "welcomed") { DispatchQueue.main.async(execute: Welcome.show) }
+        }
         .onChange(of: menuBarUsage.isOn) { fitStatusItem() }
     }
 

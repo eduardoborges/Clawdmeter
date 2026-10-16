@@ -47,23 +47,31 @@ final class Setting {
     }
 }
 
+/// Open at Login for this copy of the app.
+struct OpenAtLoginToggle: View {
+    @State private var on = SMAppService.mainApp.status == .enabled
+
+    var body: some View {
+        Toggle("Open Tally at login", isOn: $on)
+            .onChange(of: on) { _, on in
+                do {
+                    try on ? SMAppService.mainApp.register() : SMAppService.mainApp.unregister()
+                } catch {
+                    log("Open at Login: \(error.localizedDescription)")
+                    self.on = SMAppService.mainApp.status == .enabled
+                }
+            }
+    }
+}
+
 private struct GeneralSettings: View {
-    @State private var openAtLogin = SMAppService.mainApp.status == .enabled
     @State private var dirs = Setting("config_dirs", default: "~/.claude")
 
     var body: some View {
         Form {
             Section {
                 Toggle("Show 5-hour usage in the menu bar", isOn: Bindable(menuBarUsage).isOn)
-                Toggle("Open Tally at login", isOn: $openAtLogin)
-                    .onChange(of: openAtLogin) { _, on in
-                        do {
-                            try on ? SMAppService.mainApp.register() : SMAppService.mainApp.unregister()
-                        } catch {
-                            log("Open at Login: \(error.localizedDescription)")
-                            openAtLogin = SMAppService.mainApp.status == .enabled
-                        }
-                    }
+                OpenAtLoginToggle()
             }
             Section {
                 TextField("Claude config folders", text: $dirs.value)
@@ -77,6 +85,7 @@ private struct GeneralSettings: View {
                 LabeledContent("Version", value: Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "dev")
                 LabeledContent("Settings file", value: "~/.config/claude-usage-monitor/config")
                 Link("github.com/eduardoborges/tally", destination: URL(string: "https://github.com/eduardoborges/tally")!)
+                Button("Show Welcome Guide…") { Welcome.show() }
             }
         }
         .formStyle(.grouped)

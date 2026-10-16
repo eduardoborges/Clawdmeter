@@ -83,12 +83,24 @@ enum Main {
             app.run()
             return
         }
+        // `--welcome` opens the welcome guide by itself, without the daemon or
+        // Bluetooth, so it can run next to the installed app.
+        if args.contains("--welcome") {
+            let app = NSApplication.shared
+            app.setActivationPolicy(.accessory)
+            Welcome.show(WelcomeView(linkStatus: "Looking for the display", connected: false) { exit(0) })
+            app.run()
+            return
+        }
         // `--render <png>` draws the panel with made-up data, to work on the
         // design without clicking the menu bar.
         if let i = args.firstIndex(of: "--render"), i + 1 < args.count {
             let what = i + 2 < args.count ? args[i + 2] : "now"
             if what.hasPrefix("settings-") {
                 render(SettingsView(tab: String(what.dropFirst("settings-".count))), to: args[i + 1])
+            } else if what.hasPrefix("welcome-") {
+                render(WelcomeView(linkStatus: "Looking for the display", connected: false,
+                                   step: Int(what.dropFirst("welcome-".count)) ?? 0), to: args[i + 1])
             } else {
                 let dashboard = Dashboard.sample
                 if what == "loading" { dashboard.usage = nil }   // the panel before the first reading
