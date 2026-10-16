@@ -16,6 +16,7 @@ struct SettingsView: View {
             FirmwareSettings().tabItem { Label("Firmware", systemImage: "cpu") }.tag("firmware")
         }
         .frame(width: 520, height: 420)
+        .tint(Theme.accent)
     }
 }
 
@@ -180,7 +181,7 @@ private struct HookSettings: View {
                     HStack {
                         Note("Tally adds its hooks to ~/.claude/settings.json and backs the file up to ~/.config/claude-usage-monitor first.")
                         Button(hooks.installed.isEmpty ? "Install Hooks" : "Update Hooks") { hooks.install() }
-                            .glassPrimaryAction()
+                            .buttonStyle(.borderedProminent)
                     }
                     if let error = hooks.error { Text(error).foregroundStyle(.red) }
                 }

@@ -48,7 +48,6 @@ enum Welcome {
             window.titleVisibility = .hidden
             window.isMovableByWindowBackground = true
             window.isReleasedWhenClosed = false
-            window.appearance = NSAppearance(named: .darkAqua)
             window.center()
             self.window = window
         }
@@ -104,7 +103,6 @@ private struct MenuPanel: View {
                         openSettings()
                     },
                     onQuit: { NSApplication.shared.terminate(nil) })
-            .preferredColorScheme(.dark)   // dark glass, so the display's light text stays readable
             .fixedSize(horizontal: false, vertical: true)
             .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { fit.height = $0 }
             .frame(maxHeight: .infinity, alignment: .top)   // stays pinned to the top while the window catches up

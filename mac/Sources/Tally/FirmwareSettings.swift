@@ -113,10 +113,9 @@ struct FirmwareSettings: View {
                 }
                 HStack {
                     Button("Flash Latest Release") { flasher.flashLatest() }
-                        .glassPrimaryAction()
+                        .buttonStyle(.borderedProminent)
                         .disabled(flasher.release == nil || flasher.port.isEmpty || flasher.running)
                     Button("Flash a File…") { flasher.pickFile() }
-                        .glassAction()
                         .disabled(flasher.port.isEmpty || flasher.running)
                     if Firmware.esptool() == nil {
                         Text("Needs `brew install esptool`").font(.caption).foregroundStyle(.secondary)

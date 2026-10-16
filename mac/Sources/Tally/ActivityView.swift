@@ -8,7 +8,14 @@ struct ActivityView: View {
 
     var body: some View {
         if let stats {
-            Panel(title: "Last 26 weeks", detail: stats.values.first { $0.0 == "Active days" }.map { "\($0.1) days" }) {
+            Platter {
+                HStack(alignment: .firstTextBaseline) {
+                    Text("Last 26 weeks").font(.subheadline.weight(.semibold)).foregroundStyle(.secondary)
+                    Spacer()
+                    if let days = stats.values.first(where: { $0.0 == "Active days" }) {
+                        Text("\(days.1) days").font(.caption).foregroundStyle(.secondary)
+                    }
+                }
                 Heatmap(stats: stats)
             }
             Block(title: "All time") {
@@ -24,7 +31,7 @@ struct ActivityView: View {
                 }
             }
         } else {
-            Panel { Empty(text: "No /stats history yet.") }
+            Platter { Empty(text: "No /stats history yet.") }
         }
         if let today, let peak = today.perHour.indices.max(by: { today.perHour[$0] < today.perHour[$1] }),
            today.perHour[peak] > 0 {
@@ -47,7 +54,7 @@ private struct Heatmap: View {
     static let gap: CGFloat = 2.5
 
     private func color(_ level: Int) -> Color {
-        level == 0 ? Theme.track : Theme.accent.opacity([0, 0.35, 0.55, 0.78, 1][level])
+        level == 0 ? Color.primary.opacity(0.08) : Theme.accent.opacity([0, 0.35, 0.55, 0.78, 1][level])
     }
 
     var body: some View {
@@ -55,7 +62,7 @@ private struct Heatmap: View {
         VStack(alignment: .leading, spacing: 4) {
             ZStack(alignment: .topLeading) {
                 ForEach(stats.months, id: \.1) { month in
-                    Text(month.0.lowercased()).font(.system(size: 9, design: .monospaced)).foregroundStyle(Theme.faint)
+                    Text(month.0).font(.caption2).foregroundStyle(.secondary)
                         .offset(x: CGFloat(month.1) * (Self.cell + Self.gap))
                 }
             }

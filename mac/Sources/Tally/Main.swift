@@ -67,8 +67,8 @@ enum Main {
             app.setActivationPolicy(.accessory)
             let host = NSHostingView(rootView: PopoverView(dashboard: .sample, linkStatus: "Connected", connected: true,
                                                            onSettings: {})
-                .clipShape(RoundedRectangle(cornerRadius: 16))
-                .preferredColorScheme(.dark))
+                .background(.windowBackground)
+                .clipShape(RoundedRectangle(cornerRadius: 16)))
             host.frame.size = host.fittingSize
             let screen = NSScreen.main!.frame
             let panel = NSPanel(contentRect: NSRect(x: screen.minX + 80, y: screen.maxY - 80 - host.frame.height,
@@ -100,13 +100,15 @@ enum Main {
                 render(SettingsView(tab: String(what.dropFirst("settings-".count))), to: args[i + 1])
             } else if what.hasPrefix("welcome-") {
                 render(WelcomeView(linkStatus: "Looking for the display", connected: false,
-                                   step: Int(what.dropFirst("welcome-".count)) ?? 0), to: args[i + 1])
+                                   step: Int(what.dropFirst("welcome-".count)) ?? 0)
+                    .background(.windowBackground), to: args[i + 1])
             } else {
                 let dashboard = Dashboard.sample
                 if what == "loading" { dashboard.usage = nil }   // the panel before the first reading
                 render(PopoverView(dashboard: dashboard, linkStatus: what == "loading" ? "Looking for the display" : "Connected",
                                    connected: what != "loading", onSettings: {},
-                                   tab: what == "activity" ? .activity : .now), to: args[i + 1])
+                                   tab: what == "activity" ? .activity : .now)
+                    .background(.windowBackground), to: args[i + 1])
             }
             return
         }
@@ -121,7 +123,6 @@ func render(_ view: some View, to path: String) {
     let host = NSHostingView(rootView: view)
     host.frame.size = host.fittingSize
     let window = NSWindow(contentRect: host.frame, styleMask: [.borderless], backing: .buffered, defer: false)
-    window.appearance = NSAppearance(named: .darkAqua)
     window.contentView = host
     host.layoutSubtreeIfNeeded()
     RunLoop.current.run(until: Date().addingTimeInterval(0.3))   // let charts and tasks settle

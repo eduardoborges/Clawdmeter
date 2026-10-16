@@ -40,15 +40,14 @@ struct WelcomeView: View {
             Spacer()
             HStack(spacing: 8) {
                 ForEach(0..<5, id: \.self) { i in
-                    Capsule().fill(i == step ? Theme.accent : Theme.line).frame(width: i == step ? 24 : 8, height: 8)
+                    Capsule().fill(i == step ? Theme.accent : Color.secondary.opacity(0.3)).frame(width: i == step ? 24 : 8, height: 8)
                 }
             }
             .padding(.bottom, 28)
         }
         .padding(.horizontal, 40)
         .frame(width: 540, height: 460)
-        .foregroundStyle(Theme.text)
-        .background(Theme.background)
+        .tint(Theme.accent)
         .animation(reduceMotion ? nil : .spring(duration: 0.45), value: step)
         .onAppear { welcomed = true }
     }
@@ -93,10 +92,10 @@ struct WelcomeView: View {
     @ViewBuilder private var flashStatus: some View {
         if let progress = flasher.progress {
             VStack(alignment: .leading, spacing: 4) {
-                ProgressView(value: progress).tint(Theme.accent)
+                ProgressView(value: progress)
                 Text(flasher.error ?? flasher.lines.last ?? " ")
                     .font(.caption)
-                    .foregroundStyle(flasher.error == nil ? Theme.dim : Theme.alert)
+                    .foregroundStyle(flasher.error == nil ? Color.secondary : Theme.alert)
                     .lineLimit(1)
             }
         } else if Firmware.esptool() == nil {
@@ -116,7 +115,7 @@ struct WelcomeView: View {
             } else {
                 HStack(spacing: 8) {
                     ProgressView().controlSize(.small)
-                    Text(linkStatus).foregroundStyle(Theme.dim)
+                    Text(linkStatus).foregroundStyle(.secondary)
                 }
             }
             HStack(spacing: 12) {
@@ -167,23 +166,23 @@ struct WelcomeView: View {
         VStack(spacing: 10) {
             Text(title).font(.system(size: 26, weight: .semibold))
             Text(text)
-                .foregroundStyle(Theme.dim)
+                .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
                 .fixedSize(horizontal: false, vertical: true)
         }
     }
 
     private func note(_ text: String) -> some View {
-        Text(text).font(.callout).foregroundStyle(Theme.dim)
+        Text(text).font(.callout).foregroundStyle(.secondary)
     }
 }
 
 private extension View {
     func primary() -> some View {
-        glassPrimaryAction().controlSize(.large).keyboardShortcut(.defaultAction)
+        buttonStyle(.borderedProminent).controlSize(.large).keyboardShortcut(.defaultAction)
     }
 
     func secondary() -> some View {
-        glassAction().controlSize(.large)
+        controlSize(.large)
     }
 }
