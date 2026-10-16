@@ -80,7 +80,13 @@ Tally.app lives in the menu bar and does the daemon's job: it reads the token, p
 
 <img src="screenshots/mac-now.png" width="300" alt="The menu bar panel with usage, sessions and today's activity"> <img src="screenshots/mac-activity.png" width="300" alt="The Activity tab with the 26-week heatmap">
 
-Build it from the repo with Xcode's command line tools:
+Install it with Homebrew:
+
+```sh
+brew install --cask eduardoborges/tap/tally
+```
+
+Or build it from the repo with Xcode's command line tools:
 
 ```sh
 mac/build.sh                          # builds and signs mac/build/Tally.app
@@ -90,7 +96,7 @@ open /Applications/Tally.app
 
 Pair the display once in System Settings → Bluetooth (Connect next to "Tally"). macOS asks for Bluetooth permission on the first launch. Then turn on Open Tally at login in Settings. The token comes from the Keychain entry Claude Code already keeps.
 
-To flash the firmware, plug the display in over USB, open Settings → Firmware, pick the board and flash a zip from `tools/package_firmware.py` (or the latest release, once there is one). Flashing keeps the Bluetooth pairing and the display's settings. It needs esptool, from `brew install esptool` or PlatformIO.
+To flash the firmware, plug the display in over USB, open Settings → Firmware, pick the board and flash the latest release or a zip from `tools/package_firmware.py`. Flashing keeps the Bluetooth pairing and the display's settings. It needs esptool, from `brew install esptool` or PlatformIO.
 
 The app logs to `~/Library/Logs/Tally.log`.
 
