@@ -43,6 +43,10 @@ struct GlassTabs<Tab: Hashable & RawRepresentable>: View where Tab.RawValue == S
     @Namespace private var glass
 
     var body: some View {
+        bar.focusEffectDisabled()   // the panel opens with the first tab focused, so hide the focus ring
+    }
+
+    @ViewBuilder private var bar: some View {
         if #available(macOS 26, *) {
             GlassEffectContainer(spacing: 6) {
                 HStack(spacing: 4) {
