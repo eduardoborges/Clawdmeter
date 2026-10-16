@@ -59,8 +59,9 @@ public enum Stats {
     public static func messages(from s: Summary) -> [JSON] {
         var levels = s.levels
         if levels.count % 2 == 1 { levels.append(0) }
-        let heat = String(stride(from: 0, to: levels.count, by: 2).map {
-            Character(Unicode.Scalar(UInt8(65 + levels[$0] * 5 + levels[$0 + 1])))
+        let heat = String(stride(from: 0, to: levels.count, by: 2).map { i -> Character in
+            let code: Int = 65 + levels[i] * 5 + levels[i + 1]
+            return Character(Unicode.Scalar(UInt8(code)))
         })
         return [
             .object([("k", .string("hm")), ("n", .int(s.perDay.count)), ("h", .string(heat)),
