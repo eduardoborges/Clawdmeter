@@ -75,7 +75,9 @@ public enum Hooks {
         }
         json["hooks"] = hooks
         let data = try JSONSerialization.data(withJSONObject: json, options: [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes])
-        try data.write(to: file, options: .atomic)
+        // Foundation writes `"key" : value`; Claude Code writes `"key": value`.
+        let text = String(decoding: data, as: UTF8.self).replacing(#/(?m)^(\s*"(?:[^"\\]|\\.)*") : /#) { "\($0.1): " }
+        try Data((text + "\n").utf8).write(to: file, options: .atomic)
     }
 
     private static func runsScript(_ hook: Any) -> Bool {

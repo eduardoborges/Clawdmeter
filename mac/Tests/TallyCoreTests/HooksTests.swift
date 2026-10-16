@@ -41,6 +41,8 @@ import Testing
     #expect(try String(contentsOf: backup, encoding: .utf8) == original)
     #expect(try FileManager.default.destinationOfSymbolicLink(atPath: link.path) == real.path)
     #expect(Hooks.current(script: script, in: link))
+    let text = try String(contentsOf: real, encoding: .utf8)
+    #expect(text.contains(#""model": "opus""#) && !text.contains(#"" : "#) && text.hasSuffix("}\n"))
     let json = try #require(JSONSerialization.jsonObject(with: Data(contentsOf: real)) as? [String: Any])
     #expect(json["model"] as? String == "opus")
     let hooks = try #require(json["hooks"] as? [String: [[String: Any]]])
